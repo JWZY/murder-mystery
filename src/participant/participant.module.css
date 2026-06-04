@@ -1,0 +1,195 @@
+/* Participant-facing screens: intake form, self-edit, roster, character.
+   Warmer, more "invitation" than the host's utilitarian tabs. */
+
+.page {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  background:
+    radial-gradient(120% 80% at 50% -10%, #2a2150 0%, transparent 60%),
+    #14121f;
+  color: #ece9f5;
+}
+
+.inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 64px var(--space-5) 96px;
+}
+
+/* ── Masthead ── */
+.masthead { text-align: center; margin-bottom: var(--space-8); }
+.kicker {
+  font-size: var(--text-xs);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #b3a3ff;
+  margin-bottom: var(--space-3);
+}
+.partyTitle {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+.lede {
+  margin: var(--space-4) auto 0;
+  max-width: 52ch;
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  color: #c5bfde;
+}
+
+/* ── Section ── */
+.section {
+  margin-top: var(--space-8);
+  padding: var(--space-6);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+}
+.sectionTitle {
+  font-size: var(--text-lg);
+  font-weight: 650;
+  margin-bottom: 4px;
+}
+.sectionHint {
+  font-size: var(--text-md);
+  color: #a59ec4;
+  line-height: 1.55;
+  margin-bottom: var(--space-5);
+}
+
+/* ── Fields ── */
+.field { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--space-5); }
+.label { font-size: var(--text-md); font-weight: 600; color: #ddd8ef; }
+.sub { font-size: var(--text-sm); color: #9890b8; font-weight: 400; line-height: 1.45; }
+
+.input, .textarea, .select {
+  width: 100%;
+  padding: 11px 13px;
+  font: inherit;
+  font-size: var(--text-md);
+  color: #f3f1fa;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+.textarea { resize: vertical; min-height: 76px; line-height: 1.55; }
+.input:focus, .textarea:focus, .select:focus {
+  border-color: #8b7dff;
+  box-shadow: 0 0 0 3px rgba(139, 125, 255, 0.2);
+}
+.input::placeholder, .textarea::placeholder { color: #6f688c; }
+.select option { color: #14121f; }
+
+/* ── Segmented (1–5 scales, choice rows) ── */
+.segments { display: flex; gap: 6px; flex-wrap: wrap; }
+.segment {
+  flex: 1;
+  min-width: 56px;
+  padding: 9px 8px;
+  text-align: center;
+  font-size: var(--text-sm);
+  color: #c5bfde;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+.segment:hover { border-color: rgba(139, 125, 255, 0.6); }
+.segmentOn {
+  background: linear-gradient(180deg, #6f5dff, #5847e0);
+  border-color: #6f5dff;
+  color: #fff;
+  font-weight: 600;
+}
+.segmentNum { display: block; font-size: var(--text-lg); font-weight: 700; }
+.segmentCap { display: block; font-size: 10px; opacity: 0.85; margin-top: 2px; }
+
+/* ── Buttons ── */
+.primary {
+  width: 100%;
+  padding: 14px;
+  margin-top: var(--space-6);
+  font-size: var(--text-lg);
+  font-weight: 650;
+  color: #fff;
+  background: linear-gradient(180deg, #6f5dff, #5847e0);
+  border-radius: var(--radius-md);
+  transition: transform var(--transition-fast), filter var(--transition-fast);
+}
+.primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.ghost {
+  padding: 10px 16px;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: #c5bfde;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-md);
+}
+.ghost:hover { border-color: #8b7dff; color: #fff; }
+
+/* ── Toasts / banners ── */
+.banner {
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-md);
+  line-height: 1.5;
+  margin-bottom: var(--space-5);
+}
+.bannerInfo { background: rgba(139, 125, 255, 0.14); border: 1px solid rgba(139, 125, 255, 0.4); }
+.bannerWarn { background: rgba(255, 180, 70, 0.12); border: 1px solid rgba(255, 180, 70, 0.4); color: #ffd59e; }
+.bannerOk { background: rgba(80, 220, 150, 0.12); border: 1px solid rgba(80, 220, 150, 0.4); color: #a6f0c8; }
+
+.linkBox {
+  display: flex; gap: var(--space-2); align-items: center;
+  padding: 10px 12px; margin-top: var(--space-3);
+  background: rgba(0,0,0,0.3); border: 1px dashed rgba(255,255,255,0.2);
+  border-radius: var(--radius-md); font-family: ui-monospace, monospace;
+  font-size: var(--text-sm); word-break: break-all;
+}
+
+/* ── Tabs (participant home) ── */
+.tabs { display: flex; gap: 6px; justify-content: center; margin-bottom: var(--space-6); flex-wrap: wrap; }
+.tab {
+  padding: 8px 16px; font-size: var(--text-md); font-weight: 600;
+  color: #c5bfde; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1); border-radius: 999px;
+}
+.tabOn { background: #fff; color: #1a1430; border-color: #fff; }
+
+/* ── Roster ── */
+.rosterGrid { display: grid; grid-template-columns: 1fr; gap: var(--space-3); }
+.guestCard {
+  padding: var(--space-4); background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.09); border-radius: var(--radius-md);
+}
+.guestName { font-weight: 650; font-size: var(--text-md); }
+.guestBio { color: #b6afd2; font-size: var(--text-sm); line-height: 1.5; margin-top: 4px; }
+.guestDish { color: #8f88ac; font-size: var(--text-xs); margin-top: 6px; text-transform: capitalize; }
+
+/* ── Character card ── */
+.charCard {
+  padding: var(--space-6); border-radius: var(--radius-lg);
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+  border-top: 4px solid var(--accent, #6f5dff);
+}
+.charName { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+.charTitle { color: #b3a3ff; font-size: var(--text-md); margin-top: 2px; }
+.act { margin-top: var(--space-5); }
+.actLabel { font-size: var(--text-xs); letter-spacing: 0.12em; text-transform: uppercase; color: #8f88ac; }
+.actBody { margin-top: 4px; line-height: 1.6; white-space: pre-wrap; }
+.truthTag {
+  display: inline-block; margin-top: var(--space-2); padding: 6px 10px;
+  font-size: var(--text-sm); background: rgba(255, 215, 120, 0.12);
+  border: 1px solid rgba(255, 215, 120, 0.35); border-radius: var(--radius-sm);
+  color: #ffe1a3;
+}
+
+.foot { text-align: center; margin-top: var(--space-8); color: #6f688c; font-size: var(--text-sm); }

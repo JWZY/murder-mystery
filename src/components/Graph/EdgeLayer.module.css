@@ -1,0 +1,59 @@
+.svg {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.edge {
+  stroke-width: 2;
+  opacity: 0.4;
+  transition: opacity var(--transition-fast), stroke-width var(--transition-fast);
+}
+
+.edgeActive {
+  opacity: 0.95;
+  stroke-width: 3;
+}
+
+.label {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  box-shadow: var(--shadow-card);
+  z-index: 1;
+}
+
+.del {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 1;
+  color: var(--color-text-muted);
+  opacity: 0;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+}
+
+.label:hover .del {
+  opacity: 1;
+}
+
+.del:hover {
+  background: var(--color-surface-hover);
+  color: #c0392b;
+}

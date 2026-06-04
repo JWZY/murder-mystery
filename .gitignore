@@ -1,0 +1,20 @@
+node_modules
+dist
+.vite
+*.local
+*.tsbuildinfo
+.DS_Store
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Private reference data — real people's past responses. NEVER commit/publish.
+Murder Mystery Planning/
+
+# QuickEntry (Xcode)
+extras/QuickEntry/build/
+extras/QuickEntry/DerivedData/
+*.xcuserstate
+xcuserdata/
