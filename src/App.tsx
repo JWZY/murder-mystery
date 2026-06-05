@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { useCanvasStore } from './store/canvasStore';
 import { useTheme } from './hooks/useTheme';
 import TabBar from './components/TabBar/TabBar';
@@ -19,7 +20,12 @@ import ParticipantApp from './participant/ParticipantApp';
  * Kept deliberately simple — a static-site hash check, no router dependency.
  */
 export default function App() {
-  const isHost = window.location.hash.startsWith('#host');
+  const [isHost, setIsHost] = useState(() => window.location.hash.startsWith('#host'));
+  useEffect(() => {
+    const onHashChange = () => setIsHost(window.location.hash.startsWith('#host'));
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
   return isHost ? <HostApp /> : <ParticipantApp />;
 }
 
