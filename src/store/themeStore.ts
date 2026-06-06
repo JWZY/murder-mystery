@@ -330,16 +330,9 @@ interface ThemeState {
 
 const STORAGE_KEY = 'brain-canvas-theme';
 
-const savedTheme = (() => {
-  try {
-    return localStorage.getItem(STORAGE_KEY) ?? 'blue-mist';
-  } catch {
-    return 'blue-mist';
-  }
-})();
-
+// Locked to noir (white on black). Theme picker UI is removed.
 export const useThemeStore = create<ThemeState>((set) => ({
-  activeThemeId: savedTheme,
+  activeThemeId: 'noir',
   setTheme: (id) => {
     set({ activeThemeId: id });
     try { localStorage.setItem(STORAGE_KEY, id); } catch {}

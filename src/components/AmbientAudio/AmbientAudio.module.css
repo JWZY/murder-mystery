@@ -1,0 +1,51 @@
+/* Text CTA in the bottom-left (desktop) / top-right (mobile) corner.
+   Visual vocabulary mirrors .reset from DevReset.module.css, but in the
+   primary text color rather than destructive red. */
+.muteBtn {
+  position: fixed;
+  bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));
+  left: var(--space-5);
+  z-index: var(--z-overlay);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+  line-height: var(--leading-flush);
+  text-transform: uppercase;
+
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: var(--color-text);
+  text-underline-offset: 6px;
+
+  opacity: 0.55;
+  transition: opacity var(--transition-fast);
+}
+
+.muteBtn:hover,
+.muteBtn:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  /* Move to top-right on mobile so it doesn't collide with the bottom-floating
+     tab bar. */
+  .muteBtn {
+    top: max(var(--space-4), env(safe-area-inset-top, 0px));
+    bottom: auto;
+    left: auto;
+    right: var(--space-5);
+  }
+}

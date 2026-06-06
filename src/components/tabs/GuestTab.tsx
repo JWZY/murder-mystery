@@ -1,119 +1,156 @@
-import { useCanvasStore } from '../../store/canvasStore';
-import type { Guest } from '../../types/canvas';
-import f from './forms.module.css';
+import { useEffect, useState } from 'react';
+import { ChevronDown, X } from 'lucide-react';
+import {
+  hostBootstrap,
+  hostDeleteParticipant,
+  type HostWorld,
+  type ParticipantFull,
+} from '../../lib/hostApi';
+import { useHost } from '../../host/hostContext';
+import { INTAKE_QUESTIONS, formatAnswer } from '../../lib/intakeSchema';
+import s from '../../styles/ui.module.css';
 
-const RSVP: Guest['rsvp'][] = ['yes', 'maybe', 'no', 'invited'];
+// Bringing/Dishes is the one schema field surfaced in the compact header above.
+const DISH_QUESTION = INTAKE_QUESTIONS.find((q) => q.kind === 'dishes')!;
 
 export default function GuestTab() {
-  const guests = useCanvasStore((s) => s.guests);
-  const order = useCanvasStore((s) => s.guestOrder);
-  const characters = useCanvasStore((s) => s.characters);
-  const itemOrder = useCanvasStore((s) => s.itemOrder);
-  const add = useCanvasStore((s) => s.addGuest);
-  const update = useCanvasStore((s) => s.updateGuest);
-  const del = useCanvasStore((s) => s.deleteGuest);
+  const { secret } = useHost();
+  const [world, setWorld] = useState<HostWorld | null>(null);
+  const [error, setError] = useState('');
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    hostBootstrap(secret).then(setWorld).catch(() => setError('Could not load the guest list.'));
+  }, [secret]);
+
+  function toggle(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function onDelete(p: ParticipantFull) {
+    if (!confirm(`Delete "${p.preferred_name || 'unnamed'}" permanently?`)) return;
+    await hostDeleteParticipant(secret, p.id);
+    setWorld((prev) =>
+      prev ? { ...prev, participants: prev.participants.filter((x) => x.id !== p.id) } : prev
+    );
+  }
+
+  if (error) return <Shell><p className={s.body}>{error}</p></Shell>;
+  if (!world) return <Shell><p className={`${s.body} ${s.muted}`}>Loading…</p></Shell>;
+
+  const guests = world.participants;
+  const charactersById = Object.fromEntries(world.characters.map((c) => [c.id, c]));
+  const going = guests.filter((g) => g.rsvp === 'yes').length;
+  const rosterVisible = world.settings?.roster_visible ?? false;
 
   return (
-    <div className={f.page}>
-      <div className={f.inner}>
-        <header className={f.head}>
-          <h1 className={f.title}>Guest List</h1>
-          <p className={f.subtitle}>
-            Who’s coming, what they’re bringing to the potluck, and the character they’ll play.
-            This is the shareable view — only public bios show here, never the secrets.
-          </p>
-        </header>
+    <Shell>
+      <h1 className={s.title}>Guests</h1>
+      <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-2)' }}>
+        Compact roster up top, full intake answers behind each row. Click a card to expand.
+      </p>
+      <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-2)' }}>
+        {guests.length} response{guests.length === 1 ? '' : 's'} · {going} coming · roster {rosterVisible ? 'live to guests' : 'hidden from guests'}
+      </p>
 
-        {order.length === 0 && <div className={f.empty}>No guests yet. Add your first below.</div>}
+      <div style={{ marginTop: 'var(--space-6)' }}>
+        {guests.length === 0 && (
+          <p className={`${s.body} ${s.muted}`}>No responses yet — share the intake link.</p>
+        )}
 
-        {order.map((id) => {
-          const g = guests[id];
-          if (!g) return null;
-          const char = g.characterId ? characters[g.characterId] : null;
+        {guests.map((g) => {
+          const character = g.character_id ? charactersById[g.character_id] : null;
+          const dish = formatAnswer(DISH_QUESTION, g);
+          const isOpen = expanded.has(g.id);
+          const playing = character
+            ? `${character.name}${character.title ? ` · ${character.title}` : ''}${character.released ? '' : ' · unreleased'}`
+            : null;
+          const headline = [
+            g.rsvp,
+            dish || 'bringing TBD',
+            g.is_murderer ? 'murderer' : null,
+          ].filter(Boolean).join(' · ');
+
           return (
-            <div key={id} className={f.card}>
-              <button className={f.del} onClick={() => del(id)} aria-label="Remove guest">
-                ×
+            <div
+              key={g.id}
+              className={s.card}
+              onClick={() => toggle(g.id)}
+              style={{ cursor: 'pointer' }}
+            >
+              <button
+                className={s.cardClose}
+                onClick={(e) => { e.stopPropagation(); onDelete(g); }}
+                aria-label="Delete"
+              >
+                <X size={16} />
               </button>
 
-              <div className={f.row}>
-                <div className={f.field}>
-                  <span className={f.label}>Guest</span>
-                  <input
-                    className={f.input}
-                    placeholder="Name"
-                    value={g.name}
-                    onChange={(e) => update(id, { name: e.target.value })}
-                  />
-                </div>
-                <div className={f.field}>
-                  <span className={f.label}>Bringing (potluck)</span>
-                  <input
-                    className={f.input}
-                    placeholder="e.g. Lemon tart"
-                    value={g.dish}
-                    onChange={(e) => update(id, { dish: e.target.value })}
-                  />
-                </div>
+              <div className={s.row} style={{ justifyContent: 'space-between' }}>
+                <p className={s.bodyBold}>{g.preferred_name || <em>unnamed</em>}</p>
+                <ChevronDown
+                  size={18}
+                  style={{
+                    color: 'var(--color-text)',
+                    transition: 'transform var(--transition-fast)',
+                    transform: isOpen ? 'rotate(180deg)' : 'none',
+                  }}
+                />
               </div>
 
-              <div className={f.row}>
-                <div className={f.field}>
-                  <span className={f.label}>Playing</span>
-                  <select
-                    className={f.select}
-                    value={g.characterId ?? ''}
-                    onChange={(e) => update(id, { characterId: e.target.value || null })}
-                  >
-                    <option value="">— not cast yet —</option>
-                    {itemOrder.map((cid) => {
-                      const c = characters[cid];
-                      if (!c) return null;
-                      const takenByOther = c.guestId && c.guestId !== id;
-                      return (
-                        <option key={cid} value={cid}>
-                          {c.name}
-                          {c.role ? ` · ${c.role}` : ''}
-                          {takenByOther ? ' (cast)' : ''}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-                <div className={f.field} style={{ maxWidth: 160 }}>
-                  <span className={f.label}>RSVP</span>
-                  <select
-                    className={f.select}
-                    value={g.rsvp}
-                    onChange={(e) => update(id, { rsvp: e.target.value as Guest['rsvp'] })}
-                  >
-                    {RSVP.map((r) => (
-                      <option key={r} value={r}>
-                        {r}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              <p className={`${s.body} ${s.muted}`}>{headline}</p>
+              {playing && <p className={s.body} style={{ marginTop: 'var(--space-2)' }}>Playing: {playing}</p>}
 
-              {char && (
-                <div className={f.field}>
-                  <span className={f.label} style={{ color: char.color }}>
-                    {char.role || 'Character'} — public bio
-                  </span>
-                  <p style={{ fontSize: 'var(--text-md)', color: 'var(--color-text-muted)', lineHeight: 1.5 }}>
-                    {char.bio || <em>No public bio written yet (set it in Planning).</em>}
-                  </p>
-                </div>
-              )}
+              {isOpen && <Detail r={g} />}
             </div>
           );
         })}
-
-        <button className={f.addBtn} onClick={() => add()}>
-          + Add guest
-        </button>
       </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={s.page}>
+      <div className={s.inner}>{children}</div>
+    </div>
+  );
+}
+
+function Detail({ r }: { r: ParticipantFull }) {
+  const visible = INTAKE_QUESTIONS.filter((q) => !q.showIf || q.showIf(r));
+  return (
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{ marginTop: 'var(--space-4)', paddingTop: 'var(--space-4)', borderTop: '1px solid var(--color-border)', cursor: 'default' }}
+    >
+      <div className={s.qaGrid}>
+        {visible.map((q) => (
+          <QA key={String(q.key) + q.kind} q={q.label} a={formatAnswer(q, r)} />
+        ))}
+      </div>
+
+      {r.host_notes && (
+        <>
+          <p className={s.bodyBold} style={{ marginTop: 'var(--space-5)' }}>Host notes</p>
+          <p className={s.body} style={{ whiteSpace: 'pre-wrap' }}>{r.host_notes}</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function QA({ q, a }: { q: string; a: string | null | undefined }) {
+  return (
+    <div className={s.qa}>
+      <span className={s.bodyBold}>{q}</span>
+      <span className={`${s.body} ${a ? '' : s.faint}`} style={{ whiteSpace: 'pre-wrap' }}>{a || '—'}</span>
     </div>
   );
 }

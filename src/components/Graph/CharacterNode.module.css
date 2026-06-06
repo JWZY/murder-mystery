@@ -46,33 +46,37 @@
 }
 
 .role {
-  font-size: var(--text-xs);
-  letter-spacing: 0.06em;
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--node-color);
-  font-weight: 600;
+  font-weight: var(--weight-bold);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .name {
-  font-size: var(--text-lg);
-  font-weight: 600;
+  font-family: var(--font-heading);
+  font-size: var(--text-heading);
+  font-weight: var(--weight-body);
+  letter-spacing: var(--tracking-heading);
+  text-transform: uppercase;
   color: var(--color-text);
-  line-height: 1.2;
+  line-height: var(--leading-tight);
 }
 
 .cast {
   margin-top: auto;
-  font-size: var(--text-sm);
+  font-size: var(--text-body-small);
 }
 
 .castName {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: var(--color-text-muted);
+  color: var(--color-text);
 }
 
 .dot {
@@ -83,7 +87,7 @@
 }
 
 .uncast {
-  color: var(--color-text-muted);
+  color: var(--color-text);
   opacity: 0.6;
   font-style: italic;
 }

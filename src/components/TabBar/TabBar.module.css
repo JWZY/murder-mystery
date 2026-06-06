@@ -1,63 +1,183 @@
+/* Naked tab strip — no chrome, no background, no border. Just the icons
+   (or icon + label) sitting on the page, with an ink-splatter behind the
+   selected one. Matches the noir/B&W treatment. */
 .bar {
   position: fixed;
-  top: var(--space-3);
+  top: var(--space-6);
   left: 50%;
   transform: translateX(-50%);
   z-index: var(--z-overlay);
   display: flex;
   align-items: center;
-  gap: var(--space-4);
-  padding: 6px 6px 6px 16px;
-  background: var(--color-surface-glass, rgba(255, 255, 255, 0.7));
-  backdrop-filter: blur(16px) saturate(1.4);
-  -webkit-backdrop-filter: blur(16px) saturate(1.4);
-  border: 1px solid var(--color-glass-rim, var(--color-border));
-  border-radius: 999px;
-  box-shadow: var(--shadow-card-hover);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  max-width: calc(100vw - 24px);
 }
 
-.brand {
-  font-size: var(--text-md);
-  font-weight: 700;
-  color: var(--color-text);
-  white-space: nowrap;
-  letter-spacing: -0.01em;
+/* Full-bleed linear fade-to-black behind the bar with a backdrop blur.
+   Desktop: anchored to the bar's BOTTOM and extends well above the bar
+   so anything above (page top) is fully covered, with a fade tail that
+   ends 110px below the bar. */
+.bar::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -48px;
+  transform: translateX(-50%);
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.92);
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) calc(100% - 48px),
+    rgba(0, 0, 0, 0) 100%
+  );
+          mask-image: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 1) 0%,
+    rgba(0, 0, 0, 1) calc(100% - 48px),
+    rgba(0, 0, 0, 0) 100%
+  );
+  pointer-events: none;
+  z-index: -1;
 }
 
 .tabs {
   display: flex;
-  gap: 2px;
+  gap: 40px;
 }
 
 .tab {
   position: relative;
-  padding: 7px 16px;
-  border-radius: 999px;
-  font-size: var(--text-md);
-  font-weight: 500;
-  color: var(--color-text-muted);
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text);
   transition: color var(--transition-fast);
 }
 
 .tab:hover { color: var(--color-text); }
 
-.tab.active { color: #fff; }
+/* Icon-only (host) active state: tint the icon with the accent so it stands
+   out — no ink behind it. */
+.tab.active { color: var(--color-accent); }
 
-.pill {
+/* Labeled (participant) active state: the label sits in the splatter's
+   negative space, so flip to the contrast colour. */
+.tabLabeled.active { color: var(--color-accent-text); }
+
+/* Active-tab marker. A fixed-size brush-stroke silhouette behind the label.
+   Same shape every time — no morphing between tabs. The shape is the SVG's
+   alpha channel, masked over a flat accent fill. Always rendered so we get
+   a clean fade on activate and a faint ghost on hover. */
+.splatter {
   position: absolute;
-  inset: 0;
+  top: 50%;
+  left: 50%;
+  width: 168px;
+  height: 28px;
+  transform: translate(-50%, -50%);
   background: var(--color-accent);
-  border-radius: 999px;
+  -webkit-mask-image: url('../../assets/ink.svg');
+          mask-image: url('../../assets/ink.svg');
+  -webkit-mask-mode: alpha;
+          mask-mode: alpha;
+  -webkit-mask-size: 100% 100%;
+          mask-size: 100% 100%;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  pointer-events: none;
   z-index: 0;
+  opacity: 0;
+  transition: opacity 220ms ease-out;
+}
+
+.tabLabeled:hover .splatter { opacity: 0.18; }
+.tabLabeled.active .splatter { opacity: 1; }
+
+.tabIcon {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ── Labeled variant: text only, ink stroke behind it. The icon is dropped
+       intentionally — the brush stroke needs to sit cleanly behind the
+       text alone. ── */
+.tabLabeled {
+  width: auto;
+  min-width: 72px;
+  height: auto;
+  padding: 8px 14px 9px;
 }
 
 .tabLabel {
   position: relative;
   z-index: 1;
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+  line-height: var(--leading-flush);
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 @media (max-width: 640px) {
-  .brand { display: none; }
-  .bar { padding: 6px; }
+  .bar {
+    /* Bottom-floating, full viewport width so the ::before backdrop can
+       span the full screen without being clipped by an overflow box.
+       Tabs are centered via justify-content. */
+    top: auto;
+    bottom: max(var(--space-5), env(safe-area-inset-bottom, 0px));
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100vw;
+    max-width: 100vw;
+    padding: 0;
+    justify-content: center;
+  }
+  .bar::before {
+    /* Anchored to the TOP of the bar (so it covers the bar fully) and
+       extends 100vh downward, well past the viewport bottom. Fade tail
+       (110px) sits above the bar so the bar itself stays fully opaque. */
+    top: -110px;
+    bottom: auto;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.96);
+    -webkit-backdrop-filter: blur(14px);
+            backdrop-filter: blur(14px);
+    -webkit-mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) 110px,
+      rgba(0, 0, 0, 1) 100%
+    );
+            mask-image: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) 110px,
+      rgba(0, 0, 0, 1) 100%
+    );
+  }
+  .tabs {
+    gap: 24px;
+    flex: 0 0 auto;
+  }
 }

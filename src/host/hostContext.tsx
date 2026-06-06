@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { hostCheck, getHostSecret, setHostSecret, clearHostSecret } from '../lib/hostApi';
 import { NotConfiguredError } from '../lib/api';
-import s from './responses.module.css';
+import s from '../styles/ui.module.css';
 
 /**
  * Shared host-unlock state. The passcode is validated server-side once, kept in
@@ -28,7 +28,6 @@ export function HostGate({ children }: { children: ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  // Validate a stored passcode silently on mount.
   useEffect(() => {
     const stored = getHostSecret();
     if (!stored) return;
@@ -76,29 +75,38 @@ export function HostGate({ children }: { children: ReactNode }) {
 
   return (
     <div className={s.page}>
-      <div className={s.gate}>
+      <div className={s.inner}>
         <h1 className={s.title}>Host workspace</h1>
-        <p className={s.subtitle}>Enter the host passcode to manage responses, casting, and settings.</p>
+        <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-2)' }}>
+          Enter the host passcode to manage responses, casting, and settings.
+        </p>
+
         <form
-          className={s.gateForm}
+          className={s.section}
           onSubmit={(e) => {
             e.preventDefault();
             tryUnlock(input);
           }}
         >
-          <input
-            className={s.input}
-            type="password"
-            placeholder="Host passcode"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            autoFocus
-          />
-          <button className={s.btn} disabled={busy || !input}>
-            {busy ? '…' : 'Unlock'}
-          </button>
+          <label className={s.field}>
+            <span className={s.label}>Passcode</span>
+            <input
+              className={s.input}
+              type="password"
+              placeholder="Host passcode"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              autoFocus
+            />
+          </label>
+          <div className={s.actions}>
+            <button className={s.btn} disabled={busy || !input}>
+              {busy ? '…' : 'Unlock'}
+            </button>
+          </div>
         </form>
-        {error && <p className={s.error}>{error}</p>}
+
+        {error && <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-3)' }}>{error}</p>}
       </div>
     </div>
   );

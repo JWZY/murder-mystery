@@ -1,47 +1,85 @@
 :root {
-  --color-bg: #eef0f4;
-  --color-surface: #ffffff;
-  --color-surface-hover: #f3f4f7;
-  --color-border: #dce0e6;
-  --color-border-focus: #b8bec8;
-  --color-text: #1a1d24;
-  --color-text-muted: #7c8494;
-  --color-accent: #5146e8;
-  --color-accent-hover: #4338ca;
+  /* ── Colours (noir B&W) ── */
+  --color-bg: #000000;
+  --color-surface: #0c0c0c;
+  --color-surface-hover: #161616;
+  --color-border: rgba(255, 255, 255, 0.14);
+  --color-border-strong: rgba(255, 255, 255, 0.32);
+  --color-border-focus: #ffffff;
 
+  /* Only two text colours: primary (white) + muted (placeholder only). */
+  --color-text: #ffffff;
+  --color-text-muted: #8a8a8a;
+
+  /* "Accent" is the white fill used for primary CTAs + on-states.
+     Text rendered on top of an accent fill should use --color-bg. */
+  --color-accent: #ffffff;
+  --color-accent-hover: #dcdcdc;
+  --color-accent-text: #000000;
+
+  --color-required: #ffffff;
+
+  /* ── Spacing ── */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-7: 28px;
   --space-8: 32px;
   --space-10: 40px;
 
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-base: 13px;
-  --text-md: 14px;
-  --text-lg: 18px;
+  /* ── Type system (strict — do not add to this without removing something) ──
+     3 families · 4 sizes · 2 weights · 3 tracking · 4 leading. That's it. */
 
+  /* Families */
+  --font-title: 'Special Elite', 'Courier Prime', ui-monospace, monospace;
+  --font-heading: 'Special Elite', 'Courier Prime', ui-monospace, monospace;
+  --font-body: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+
+  /* Sizes — ONE per role. No `-xl`, no `-lg`, no in-between sizes. */
+  --text-title: clamp(32px, 4.6vw, 48px);
+  --text-heading: clamp(20px, 2.6vw, 24px);
+  --text-body: 16px;
+  --text-body-small: 13px;     /* dense utility lines + tab labels only */
+
+  /* Weights — ONLY two. Body weight + a single bold. */
+  --weight-body: 400;
+  --weight-bold: 600;
+
+  /* Tracking */
+  --tracking-title: 0.06em;
+  --tracking-heading: 0.12em;
+  --tracking-eyebrow: 0.08em;  /* small uppercase labels */
+
+  /* Leading */
+  --leading-flush: 1;          /* icons / single-line button glyphs */
+
+  --leading-tight: 1.05;
+  --leading-snug: 1.4;
+  --leading-body: 1.6;
+
+  /* ── Radius / shadow ── */
   --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-card: 40px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-pill: 999px;
 
-  --file-width: 290px;
-  --file-height: 320px;
-  --folder-width: 306px;
-  --folder-height: 352px;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.5);
+  --shadow-card-hover: 0 8px 24px rgba(0, 0, 0, 0.6);
 
-  --shadow-card: 0 2px 8px rgba(0,0,0,0.06);
-  --shadow-card-hover: 0 4px 16px rgba(0,0,0,0.1);
-  --shadow-card-drag: 0 8px 32px rgba(0,0,0,0.14);
-
+  /* ── Motion ── */
   --transition-fast: 120ms ease;
   --transition-medium: 200ms ease;
 
   --z-canvas: 0;
   --z-controls: 100;
   --z-overlay: 1000;
+
+  /* Legacy canvas tokens (only used by the planning canvas — keep them) */
+  --file-width: 290px;
+  --file-height: 320px;
+  --folder-width: 306px;
+  --folder-height: 352px;
 }

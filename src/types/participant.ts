@@ -13,8 +13,9 @@ export interface ParticipantRecord {
   roleplay_comfort: number | null; // 1–5
   trope_wishlist: string;
   murderer_appetite: MurdererAppetite | null;
+  murdered_appetite: MurdererAppetite | null;
   dietary: string;
-  dish_category: DishCategory | null;
+  dish_category: string | null; // comma-separated DishCategory values for multi-select
   dish_detail: string;
   hard_limits: string;
   // Part B — truth harvest
@@ -37,7 +38,7 @@ export interface ParticipantRecord {
 export interface RosterEntry {
   preferred_name: string;
   public_bio: string;
-  dish_category: DishCategory | null;
+  dish_category: string | null;
   dish_detail: string;
   rsvp: Rsvp;
 }
@@ -66,7 +67,7 @@ export interface PublicSettings {
 export function emptyRecord(): ParticipantRecord {
   return {
     preferred_name: '', contact: '', roleplay_comfort: null, trope_wishlist: '',
-    murderer_appetite: null, dietary: '', dish_category: null, dish_detail: '',
+    murderer_appetite: null, murdered_appetite: null, dietary: '', dish_category: null, dish_detail: '',
     hard_limits: '', surprise_fact: '', worst_job: '', hobby: '',
     changed_opinion: '', outable_secret: '', social_known: '', social_want: '',
     fakeable_skill: '', reveal_dial: null, public_bio: '', rsvp: 'yes',

@@ -1,173 +1,197 @@
+import { useEffect, useRef } from 'react';
 import type { ParticipantRecord } from '../types/participant';
+import { INTAKE_QUESTIONS, type DishOption, type Question } from '../lib/intakeSchema';
 import s from './participant.module.css';
 
 type Patch = (p: Partial<ParticipantRecord>) => void;
 
-/** Small typed field primitives ------------------------------------------ */
-function Field({ label, sub, children }: { label: string; sub?: string; children: React.ReactNode }) {
+function parseDishDetail(raw: string): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const v = JSON.parse(raw);
+    return v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, string>) : {};
+  } catch { return {}; }
+}
+function serializeDishDetail(map: Record<string, string>): string {
+  const trimmed = Object.fromEntries(Object.entries(map).filter(([, v]) => v.trim().length > 0));
+  return Object.keys(trimmed).length ? JSON.stringify(trimmed) : '';
+}
+
+function Text({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: Patch }) {
   return (
-    <label className={s.field}>
-      <span className={s.label}>
-        {label}
-        {sub && <div className={s.sub}>{sub}</div>}
-      </span>
-      {children}
-    </label>
+    <input
+      className={s.tfInput}
+      value={String(rec[q.key] ?? '')}
+      placeholder={q.placeholder ?? ' '}
+      onChange={(e) => patch({ [q.key]: e.target.value } as Partial<ParticipantRecord>)}
+    />
   );
 }
 
-function Text({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
-  return <input className={s.input} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
-}
-
-function Area({ value, onChange, placeholder, rows }: { value: string; onChange: (v: string) => void; placeholder?: string; rows?: number }) {
-  return <textarea className={s.textarea} rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />;
-}
-
-function Scale({ value, onChange, caps }: { value: number | null; onChange: (v: number) => void; caps: string[] }) {
+function Area({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: Patch }) {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const value = String(rec[q.key] ?? '');
+  // Match the single-line input height by default; grow with content (and shrink
+  // back when cleared) by syncing height to scrollHeight whenever the value changes.
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }, [value]);
   return (
-    <div className={s.segments}>
-      {caps.map((cap, i) => {
-        const n = i + 1;
+    <textarea
+      ref={ref}
+      className={s.tfArea}
+      rows={1}
+      value={value}
+      placeholder={q.placeholder ?? ' '}
+      onChange={(e) => patch({ [q.key]: e.target.value } as Partial<ParticipantRecord>)}
+    />
+  );
+}
+
+function Choice({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: Patch }) {
+  const current = String(rec[q.key] ?? '');
+  return (
+    <div className={s.rfChecks}>
+      {(q.options ?? []).map((o) => {
+        const active = current === o.v;
         return (
-          <button type="button" key={n}
-            className={`${s.segment} ${value === n ? s.segmentOn : ''}`}
-            onClick={() => onChange(n)}>
-            <span className={s.segmentNum}>{n}</span>
-            <span className={s.segmentCap}>{cap}</span>
-          </button>
+          <label
+            key={o.v}
+            className={s.rfCheckRow}
+            onClick={(e) => { e.preventDefault(); patch({ [q.key]: active ? '' : o.v } as Partial<ParticipantRecord>); }}
+          >
+            <input type="radio" name={String(q.key)} checked={active} readOnly />
+            <span className={`${s.tfRadio} ${active ? s.tfRadioOn : ''}`} />
+            <span className={s.rfCheckLabel}>{o.label}</span>
+          </label>
         );
       })}
     </div>
   );
 }
 
-function Choice<T extends string>({ value, onChange, options }: { value: T | null; onChange: (v: T) => void; options: { v: T; label: string }[] }) {
+function Scale({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: Patch }) {
+  const value = rec[q.key] as number | null;
   return (
-    <div className={s.segments}>
-      {options.map((o) => (
-        <button type="button" key={o.v}
-          className={`${s.segment} ${value === o.v ? s.segmentOn : ''}`}
-          onClick={() => onChange(o.v)}>
-          {o.label}
-        </button>
-      ))}
+    <div className={s.rfChecks}>
+      {(q.caps ?? []).map((cap, i) => {
+        const n = i + 1;
+        const active = value === n;
+        const desc = q.descriptions?.[i];
+        return (
+          <label
+            key={n}
+            className={s.rfCheckRow}
+            onClick={(e) => { e.preventDefault(); patch({ [q.key]: n } as Partial<ParticipantRecord>); }}
+          >
+            <input type="radio" name={String(q.key)} checked={active} readOnly />
+            <span className={`${s.tfRadio} ${active ? s.tfRadioOn : ''}`} />
+            <span className={s.rfCheckLabel}>
+              <strong>{n} — {cap}</strong>
+              {desc && <span className={s.tfChoiceDesc}>: {desc}</span>}
+            </span>
+          </label>
+        );
+      })}
     </div>
   );
 }
 
-/** The full intake/edit field set. ---------------------------------------- */
-export default function RecordFields({ rec, patch }: { rec: ParticipantRecord; patch: Patch }) {
+function DishRow({ option, active, value, onToggle, onValueChange }: {
+  option: DishOption;
+  active: boolean;
+  value: string;
+  onToggle: () => void;
+  onValueChange: (v: string) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const prev = useRef(active);
+  useEffect(() => {
+    if (active && !prev.current) inputRef.current?.focus();
+    prev.current = active;
+  }, [active]);
   return (
-    <>
-      {/* ── Part A: the basics ── */}
-      <div className={s.section}>
-        <div className={s.sectionTitle}>The basics</div>
-        <div className={s.sectionHint}>
-          So I can reach you and balance the potluck. Quick stuff.
+    <label
+      className={s.rfCheckRow}
+      onClick={(e) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' && (target as HTMLInputElement).type === 'text') return;
+        e.preventDefault();
+        onToggle();
+      }}
+    >
+      <input type="checkbox" checked={active} readOnly />
+      <span className={`${s.tfCheck} ${active ? s.tfCheckOn : ''}`} />
+      <span className={s.rfDishMain}>
+        <span className={s.rfCheckLabel}>{option.label}</span>
+        {active && option.placeholder !== undefined && (
+          <input
+            ref={inputRef}
+            type="text"
+            className={s.tfDishInput}
+            value={value}
+            placeholder={option.placeholder}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onValueChange(e.target.value)}
+          />
+        )}
+      </span>
+    </label>
+  );
+}
+
+function Dishes({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: Patch }) {
+  const cats = (rec.dish_category ?? '').split(',').filter(Boolean);
+  const details = parseDishDetail(rec.dish_detail);
+  return (
+    <div className={s.rfChecks}>
+      {(q.dishOptions ?? []).map((o) => {
+        const active = cats.includes(o.v);
+        const toggle = () => {
+          const nextCats = active ? cats.filter((x) => x !== o.v) : [...cats, o.v];
+          const nextDetails = { ...details };
+          if (!active && nextDetails[o.v] == null) nextDetails[o.v] = '';
+          if (active) delete nextDetails[o.v];
+          patch({ dish_category: nextCats.join(','), dish_detail: serializeDishDetail(nextDetails) });
+        };
+        return (
+          <DishRow
+            key={o.v}
+            option={o}
+            active={active}
+            value={details[o.v] ?? ''}
+            onToggle={toggle}
+            onValueChange={(v) => patch({ dish_detail: serializeDishDetail({ ...details, [o.v]: v }) })}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function renderInput(q: Question, rec: ParticipantRecord, patch: Patch) {
+  switch (q.kind) {
+    case 'text':   return <Text q={q} rec={rec} patch={patch} />;
+    case 'area':   return <Area q={q} rec={rec} patch={patch} />;
+    case 'choice': return <Choice q={q} rec={rec} patch={patch} />;
+    case 'scale':  return <Scale q={q} rec={rec} patch={patch} />;
+    case 'dishes': return <Dishes q={q} rec={rec} patch={patch} />;
+  }
+}
+
+export default function RecordFields({ rec, patch }: { rec: ParticipantRecord; patch: Patch }) {
+  const visible = INTAKE_QUESTIONS.filter((q) => !q.showIf || q.showIf(rec));
+  return (
+    <div className={s.rfList}>
+      {visible.map((q) => (
+        <div key={String(q.key) + q.kind} className={s.rfField}>
+          <span className={s.rfLabel}>{q.label}</span>
+          {renderInput(q, rec, patch)}
         </div>
-
-        <Field label="Your preferred name">
-          <Text value={rec.preferred_name} onChange={(v) => patch({ preferred_name: v })} placeholder="What you go by" />
-        </Field>
-        <Field label="Best way to reach you" sub="Texts/DMs about the party — host eyes only.">
-          <Text value={rec.contact} onChange={(v) => patch({ contact: v })} placeholder="Phone, IG, Discord, email…" />
-        </Field>
-
-        <Field label="Are you coming?">
-          <Choice value={rec.rsvp} onChange={(v) => patch({ rsvp: v })}
-            options={[{ v: 'yes', label: 'Yes!' }, { v: 'maybe', label: 'Maybe' }, { v: 'no', label: 'Can’t' }]} />
-        </Field>
-
-        <Field label="Bringing to the potluck?">
-          <Choice value={rec.dish_category} onChange={(v) => patch({ dish_category: v })}
-            options={[
-              { v: 'appetizer', label: 'Appetizer' }, { v: 'main', label: 'Main' },
-              { v: 'side', label: 'Side' }, { v: 'dessert', label: 'Dessert' }, { v: 'drink', label: 'Drinks' },
-            ]} />
-        </Field>
-        <Field label="…anything specific in mind?">
-          <Text value={rec.dish_detail} onChange={(v) => patch({ dish_detail: v })} placeholder="e.g. cranberry brie bites — or TBD" />
-        </Field>
-        <Field label="Dietary constraints / allergies">
-          <Text value={rec.dietary} onChange={(v) => patch({ dietary: v })} placeholder="Veg, vegan, allergies, none…" />
-        </Field>
-      </div>
-
-      {/* ── Part A: casting signal ── */}
-      <div className={s.section}>
-        <div className={s.sectionTitle}>How you want to play</div>
-        <div className={s.sectionHint}>
-          This is a costumed, character-driven murder mystery. No experience needed — I’ll cast you to your comfort.
-        </div>
-
-        <Field label="How big a role do you want?" sub="Be honest — a great Extra beats a miserable Lead.">
-          <Scale value={rec.roleplay_comfort} onChange={(v) => patch({ roleplay_comfort: v })}
-            caps={['Extra', 'Cameo', 'Recurring', 'Supporting', 'Lead']} />
-        </Field>
-
-        <Field label="Any character types you’d love (or hate) to play?" sub="e.g. detective, washed-up rockstar, con artist, sweet grandma…">
-          <Area value={rec.trope_wishlist} onChange={(v) => patch({ trope_wishlist: v })} rows={2} placeholder="Dream roles, or 'anything but the lead'…" />
-        </Field>
-
-        <Field label="Could you be the murderer?" sub="Needs someone who won’t crack under questioning / likes social-deception games.">
-          <Choice value={rec.murderer_appetite} onChange={(v) => patch({ murderer_appetite: v })}
-            options={[{ v: 'very', label: 'Very into it' }, { v: 'maybe', label: 'Could try' }, { v: 'no', label: 'Please no' }]} />
-        </Field>
-      </div>
-
-      {/* ── Part B: the truth harvest ── */}
-      <div className={s.section}>
-        <div className={s.sectionTitle}>The real you (the secret sauce)</div>
-        <div className={s.sectionHint}>
-          Last time, people felt they got to know the <em>characters</em> but not each
-          other. So this year your character is built partly from <strong>real things about you.</strong>{' '}
-          Answer what you’re comfortable with — the dial at the bottom controls how much of this
-          actually shows up. There are no wrong answers and the funny/awkward ones are the best.
-        </div>
-
-        <Field label="Something people are surprised to learn about you">
-          <Area value={rec.surprise_fact} onChange={(v) => patch({ surprise_fact: v })} rows={2} placeholder="A hidden talent, an odd fact, a wild past…" />
-        </Field>
-        <Field label="The worst (or most chaotic) job you’ve ever had">
-          <Area value={rec.worst_job} onChange={(v) => patch({ worst_job: v })} rows={2} placeholder="We love a horror story." />
-        </Field>
-        <Field label="A hobby or obsession you could talk about for an hour">
-          <Area value={rec.hobby} onChange={(v) => patch({ hobby: v })} rows={2} placeholder="The thing you won’t shut up about." />
-        </Field>
-        <Field label="An opinion you used to hold that has since changed">
-          <Area value={rec.changed_opinion} onChange={(v) => patch({ changed_opinion: v })} rows={2} placeholder="What you believed, and what flipped it." />
-        </Field>
-        <Field label="A small, harmless ‘secret’ you’d be fine getting outed in-character" sub="Nothing heavy — think 'I’ve never seen Star Wars', not real confessions.">
-          <Area value={rec.outable_secret} onChange={(v) => patch({ outable_secret: v })} rows={2} placeholder="A silly, low-stakes secret." />
-        </Field>
-        <Field label="A skill you could believably fake on the spot" sub="Accent, palm-reading, sportscaster commentary, a magic trick…">
-          <Text value={rec.fakeable_skill} onChange={(v) => patch({ fakeable_skill: v })} placeholder="Your party trick." />
-        </Field>
-
-        <Field label="Who here do you already know well?" sub="Helps me avoid casting you with only your bestie.">
-          <Text value={rec.social_known} onChange={(v) => patch({ social_known: v })} placeholder="Names, if any" />
-        </Field>
-        <Field label="Anyone you’d like to get to know better?" sub="I’ll try to entangle your storylines. Totally optional.">
-          <Text value={rec.social_want} onChange={(v) => patch({ social_want: v })} placeholder="Names, or 'surprise me'" />
-        </Field>
-
-        <Field label="How much should tonight reveal the real you?" sub="Your consent dial. 1 = pure fiction, a mask. 5 = basically me in a wig.">
-          <Scale value={rec.reveal_dial} onChange={(v) => patch({ reveal_dial: v })}
-            caps={['Mask', 'Mostly', 'Mix', 'Open', 'Wig']} />
-        </Field>
-      </div>
-
-      {/* ── Public bio + safety ── */}
-      <div className={s.section}>
-        <div className={s.sectionTitle}>Two last things</div>
-        <Field label="A one-liner other guests can see" sub="The ONLY thing others see before the party. Be intriguing, stay in your real voice.">
-          <Text value={rec.public_bio} onChange={(v) => patch({ public_bio: v })} placeholder="e.g. 'Will out-argue you about pizza toppings.'" />
-        </Field>
-        <Field label="Any hard limits / topics to keep out of your character?" sub="Private. I will never weaponize anything real that you flag here.">
-          <Area value={rec.hard_limits} onChange={(v) => patch({ hard_limits: v })} rows={2} placeholder="Anything off-limits for your storyline." />
-        </Field>
-      </div>
-    </>
+      ))}
+    </div>
   );
 }

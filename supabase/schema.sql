@@ -58,6 +58,7 @@ create table if not exists participants (
   roleplay_comfort smallint check (roleplay_comfort between 1 and 5),  -- Extra→Main
   trope_wishlist  text not null default '',
   murderer_appetite text check (murderer_appetite in ('very','maybe','no')),
+  murdered_appetite text check (murdered_appetite in ('very','maybe','no')),
   dietary         text not null default '',
   dish_category   text,            -- appetizer/main/dessert/side/drink
   dish_detail     text not null default '',
@@ -83,6 +84,9 @@ create table if not exists participants (
   is_murderer     boolean not null default false,
   host_notes      text not null default ''
 );
+-- migration: add columns to existing installs
+alter table participants add column if not exists murdered_appetite text
+  check (murdered_appetite in ('very','maybe','no'));
 
 -- ─── characters ───────────────────────────────────────────────────────────
 -- Host-authored. The fiction layer + woven truth. NEVER exposed to anon except
@@ -133,8 +137,8 @@ create table if not exists story_acts (
 -- ─── public_settings (single-row knobs the participant view may read) ──────
 create table if not exists public_settings (
   id          boolean primary key default true check (id),   -- enforce 1 row
-  party_title text not null default 'Murder Mystery 2026',
-  party_blurb text not null default '',
+  party_title text not null default 'Murder Mystery + Potluck',
+  party_blurb text not null default '57 wagon trailway · July 11 7PM',
   intake_open boolean not null default true,
   roster_visible boolean not null default true
 );
@@ -188,7 +192,7 @@ begin
   end if;
 
   insert into participants (
-    preferred_name, contact, roleplay_comfort, trope_wishlist, murderer_appetite,
+    preferred_name, contact, roleplay_comfort, trope_wishlist, murderer_appetite, murdered_appetite,
     dietary, dish_category, dish_detail, hard_limits,
     surprise_fact, worst_job, hobby, changed_opinion, outable_secret,
     social_known, social_want, fakeable_skill, reveal_dial,
@@ -199,6 +203,7 @@ begin
     nullif(payload->>'roleplay_comfort','')::smallint,
     coalesce(payload->>'trope_wishlist',''),
     nullif(payload->>'murderer_appetite',''),
+    nullif(payload->>'murdered_appetite',''),
     coalesce(payload->>'dietary',''),
     nullif(payload->>'dish_category',''),
     coalesce(payload->>'dish_detail',''),
@@ -227,7 +232,7 @@ returns jsonb
 language sql security definer set search_path = public as $$
   select to_jsonb(r) - 'token' - 'id' - 'character_id' - 'is_murderer' - 'host_notes'
   from (
-    select preferred_name, contact, roleplay_comfort, trope_wishlist, murderer_appetite,
+    select preferred_name, contact, roleplay_comfort, trope_wishlist, murderer_appetite, murdered_appetite,
            dietary, dish_category, dish_detail, hard_limits,
            surprise_fact, worst_job, hobby, changed_opinion, outable_secret,
            social_known, social_want, fakeable_skill, reveal_dial,
@@ -248,6 +253,7 @@ begin
     roleplay_comfort = coalesce(nullif(payload->>'roleplay_comfort','')::smallint, roleplay_comfort),
     trope_wishlist   = coalesce(payload->>'trope_wishlist', trope_wishlist),
     murderer_appetite= coalesce(nullif(payload->>'murderer_appetite',''), murderer_appetite),
+    murdered_appetite= coalesce(nullif(payload->>'murdered_appetite',''), murdered_appetite),
     dietary          = coalesce(payload->>'dietary', dietary),
     dish_category    = coalesce(nullif(payload->>'dish_category',''), dish_category),
     dish_detail      = coalesce(payload->>'dish_detail', dish_detail),

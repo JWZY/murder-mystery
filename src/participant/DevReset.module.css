@@ -1,0 +1,38 @@
+/* Dev-only escape hatch — same vocabulary as the primary CTA (.btn) but
+   in destructive red and hidden until the developer hovers the corner. */
+
+.reset {
+  position: fixed;
+  bottom: var(--space-4);
+  right: var(--space-5);
+  z-index: 9999;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 2px;
+
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+  line-height: var(--leading-flush);
+  text-transform: uppercase;
+
+  color: #ef4444;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: #ef4444;
+  text-underline-offset: 6px;
+
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+.reset:hover,
+.reset:focus-visible {
+  opacity: 1;
+}

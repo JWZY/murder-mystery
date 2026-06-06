@@ -76,4 +76,4 @@ export interface StoryAct {
   notes: string;
 }
 
-export type TabId = 'responses' | 'casting' | 'settings' | 'intake' | 'guests' | 'planning';
+export type TabId = 'guests' | 'casting' | 'planning' | 'settings';

@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { hostBootstrap, hostUpdateSettings, type HostSettings } from '../lib/hostApi';
 import { useHost } from './hostContext';
-import s from './responses.module.css';
-import c from './casting.module.css';
+import s from '../styles/ui.module.css';
 
 /** Host knobs that change what the public participant site does. */
 export default function SettingsTab() {
@@ -28,79 +27,69 @@ export default function SettingsTab() {
     const next = { ...(v as HostSettings), ...patch };
     setV(next);
     await hostUpdateSettings(secret, patch);
-    setFlash('Saved ✓');
+    setFlash('Saved');
     setTimeout(() => setFlash(''), 1500);
   }
 
-  if (error) return <div className={s.page}><div className={s.inner}><p className={s.error}>{error}</p></div></div>;
-  if (!v) return <div className={s.page}><div className={s.inner}><p className={s.subtitle}>Loading…</p></div></div>;
+  if (error) return <Shell><p className={s.body}>{error}</p></Shell>;
+  if (!v) return <Shell><p className={`${s.body} ${s.muted}`}>Loading…</p></Shell>;
 
   const intakeLink = `${window.location.origin}${import.meta.env.BASE_URL}`;
 
   return (
-    <div className={s.page}>
-      <div className={s.inner}>
-        <header className={s.head}>
-          <h1 className={s.title}>Settings</h1>
-          <p className={s.subtitle}>Controls for the public participant site. Changes are live immediately.</p>
-        </header>
+    <Shell>
+      <h1 className={s.title}>Settings</h1>
+      <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-2)' }}>
+        Controls for the public participant site. Changes are live immediately.
+      </p>
 
-        <div className={s.card}>
-          <label className={c.field}>
-            <span className={s.q}>Party title</span>
-            <input
-              className={c.input}
-              value={v.party_title}
-              onChange={(e) => setV({ ...v, party_title: e.target.value })}
-              onBlur={(e) => save({ party_title: e.target.value })}
-            />
-          </label>
-          <label className={c.field}>
-            <span className={s.q}>Blurb (shown above the intake form)</span>
-            <textarea
-              className={c.area}
-              value={v.party_blurb}
-              onChange={(e) => setV({ ...v, party_blurb: e.target.value })}
-              onBlur={(e) => save({ party_blurb: e.target.value })}
-            />
-          </label>
+      <div className={s.section}>
+        <label className={`${s.body} ${s.row}`} style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-3)' }}>
+          <input
+            type="checkbox"
+            checked={v.intake_open}
+            onChange={(e) => save({ intake_open: e.target.checked })}
+          />
+          Intake open {v.intake_open ? '(accepting new guests)' : '(closed)'}
+        </label>
+        <label className={`${s.body} ${s.row}`} style={{ gap: 'var(--space-2)' }}>
+          <input
+            type="checkbox"
+            checked={v.roster_visible}
+            onChange={(e) => save({ roster_visible: e.target.checked })}
+          />
+          Roster visible to guests
+        </label>
 
-          <div className={c.row} style={{ marginTop: 8 }}>
-            <label className={c.toggle}>
-              <input
-                type="checkbox"
-                checked={v.intake_open}
-                onChange={(e) => save({ intake_open: e.target.checked })}
-              />
-              Intake open {v.intake_open ? '(accepting new guests)' : '(closed)'}
-            </label>
-            <span className={c.spacer} />
-            <label className={c.toggle}>
-              <input
-                type="checkbox"
-                checked={v.roster_visible}
-                onChange={(e) => save({ roster_visible: e.target.checked })}
-              />
-              Roster visible to guests
-            </label>
-          </div>
-          {flash && <p className={c.saved} style={{ marginTop: 10 }}>{flash}</p>}
+        {flash && <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-3)' }}>{flash}</p>}
+      </div>
+
+      <div className={s.section}>
+        <p className={s.bodyBold}>Public intake link</p>
+        <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-2)' }}>
+          Share this to collect responses.
+        </p>
+        <div className={s.actions} style={{ marginTop: 'var(--space-3)' }}>
+          <span className={s.code}>{intakeLink}</span>
+          <button className={`${s.btn} ${s.btnGhost}`} onClick={() => navigator.clipboard?.writeText(intakeLink)}>
+            Copy
+          </button>
         </div>
+      </div>
 
-        <div className={s.card}>
-          <span className={s.q}>Public intake link (share this to collect responses)</span>
-          <div className={c.saveBar}>
-            <span className={c.link}>{intakeLink}</span>
-            <button className={`${c.btn} ${c.btnGhost}`} onClick={() => navigator.clipboard?.writeText(intakeLink)}>
-              Copy
-            </button>
-          </div>
-        </div>
-
-        <button className={`${c.btn} ${c.btnGhost}`} onClick={lock}>
+      <div className={s.section}>
+        <button className={`${s.btn} ${s.btnGhost}`} onClick={lock}>
           Lock host workspace
         </button>
       </div>
+    </Shell>
+  );
+}
+
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className={s.page}>
+      <div className={s.inner}>{children}</div>
     </div>
   );
 }

@@ -13,6 +13,10 @@ dist
 # Private reference data — real people's past responses. NEVER commit/publish.
 Murder Mystery Planning/
 
+# Local design/effects reference dumps — not part of the build.
+ink-effects/
+smoke-and-blood/
+
 # QuickEntry (Xcode)
 extras/QuickEntry/build/
 extras/QuickEntry/DerivedData/
