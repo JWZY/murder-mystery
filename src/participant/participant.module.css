@@ -94,8 +94,14 @@
   color: var(--color-accent, currentColor);
   transform: translateY(-2px);
 }
-.tfCaret[data-done='true'] { animation: tfBlink 1s steps(1) 2; }
+.tfCaret[data-done='true'] {
+  animation: tfBlinkDone 2s steps(1) forwards;
+}
 @keyframes tfBlink { 50% { opacity: 0; } }
+@keyframes tfBlinkDone {
+  25%, 75%, 100% { opacity: 0; }
+  0%, 50% { opacity: 1; }
+}
 .typewriterReserve {
   position: relative;
   display: inline-block;
@@ -283,7 +289,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-10);
+  gap: var(--space-20);
   position: relative;
   z-index: 3;
 }
@@ -385,7 +391,7 @@
 
   .tfWelcome {
     width: 100%;
-    gap: var(--space-10);
+    gap: var(--space-20);
   }
 
   .tfWelcome::before {
