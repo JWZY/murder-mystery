@@ -13,6 +13,12 @@
   -webkit-mask-image: linear-gradient(to top, #000 0%, #000 60%, transparent 100%);
 }
 
+:global(.tfIntakeSmoke) {
+  z-index: 2;
+  opacity: 0.72;
+  mix-blend-mode: screen;
+}
+
 .wisp {
   position: absolute;
   bottom: -180px;

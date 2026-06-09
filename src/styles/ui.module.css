@@ -18,6 +18,9 @@
   margin: 0 auto;
   padding: 100px var(--space-5) 120px;
 }
+.tabPanel {
+  will-change: opacity;
+}
 @media (max-width: 640px) {
   .inner { padding: 64px var(--space-5) 140px; }
 }
@@ -25,10 +28,8 @@
 .section {
   margin-top: var(--space-7);
   padding-top: var(--space-6);
-  border-top: 1px solid var(--color-border);
 }
-.section:first-child { margin-top: 0; padding-top: 0; border-top: none; }
-.title + .section { border-top: none; }
+.section:first-child { margin-top: 0; padding-top: 0; }
 
 /* Tab/page intro lede — primary text colour, sits above the section divider */
 .intro {
@@ -55,6 +56,12 @@
   text-transform: uppercase;
   color: var(--color-text);
   margin: 0;
+}
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
 }
 .heading {
   font-family: var(--font-heading);
@@ -241,7 +248,6 @@
 }
 .btnGhost:hover:not(:disabled) { opacity: 1; }
 
-
 .actions {
   display: flex;
   align-items: center;
@@ -316,4 +322,8 @@
 }
 @media (max-width: 640px) {
   .qaGrid { grid-template-columns: 1fr; }
+  .titleRow {
+    flex-direction: column;
+    gap: var(--space-3);
+  }
 }

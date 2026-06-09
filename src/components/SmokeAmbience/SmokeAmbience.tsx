@@ -14,7 +14,11 @@ const PARTICLE_COUNT = 90;
 const TEXTURE_URL =
   'https://raw.githubusercontent.com/marcobiedermann/playground/master/three.js/smoke-particles/dist/assets/images/clouds.png';
 
-export default function SmokeAmbience() {
+type Props = {
+  className?: string;
+};
+
+export default function SmokeAmbience({ className = '' }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,5 +125,5 @@ export default function SmokeAmbience() {
     };
   }, []);
 
-  return <div ref={containerRef} className={s.layer} aria-hidden="true" />;
+  return <div ref={containerRef} className={`${s.layer} ${className}`} aria-hidden="true" />;
 }

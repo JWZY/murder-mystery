@@ -134,9 +134,9 @@
   font-family: var(--font-heading);
   font-size: var(--text-body-small);
   font-weight: var(--weight-body);
-  letter-spacing: var(--tracking-eyebrow);
+  letter-spacing: 0;
   line-height: var(--leading-snug);
-  text-transform: uppercase;
+  text-transform: none;
   color: var(--color-text);
   opacity: 0.55;
   margin: 4px 0 0;

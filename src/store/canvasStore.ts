@@ -144,7 +144,7 @@ export const useCanvasStore = create<MysteryState>()(
       snapGuides: [],
       previewItemId: null,
 
-      activeTab: 'planning',
+      activeTab: 'guests',
       selectedId: null,
       connectingFrom: null,
 

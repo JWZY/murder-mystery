@@ -64,7 +64,7 @@ function HostShell() {
   const setActiveTab = useCanvasStore((s) => s.setActiveTab);
   return (
     <>
-      <TabBar<TabId> tabs={HOST_TABS} activeId={activeTab} onChange={setActiveTab} />
+      <TabBar<TabId> tabs={HOST_TABS} activeId={activeTab} onChange={setActiveTab} showLabels />
       {activeTab === 'casting' && <CastingTab />}
       {activeTab === 'settings' && <SettingsTab />}
       {activeTab === 'planning' && <PlanningTab />}

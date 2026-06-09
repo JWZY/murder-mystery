@@ -1,3 +1,4 @@
+import { useEffect, useId, useRef, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import styles from './TabBar.module.css';
 
@@ -23,18 +24,55 @@ export default function TabBar<Id extends string>({
   onChange,
   showLabels = false,
 }: Props<Id>) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuId = useId();
+  const menuTitleId = useId();
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [menuOpen]);
+
+  const selectTab = (id: Id) => {
+    onChange(id);
+    setMenuOpen(false);
+  };
+
   return (
-    <nav className={`${styles.bar} ${showLabels ? styles.barLabeled : ''}`} data-ui>
+    <nav
+      className={`${styles.bar} ${showLabels ? styles.barLabeled : ''} ${menuOpen ? styles.menuOpen : ''}`}
+      data-ui
+    >
+      {showLabels && (
+        <button
+          type="button"
+          className={styles.menuButton}
+          onClick={() => setMenuOpen(true)}
+          aria-haspopup="dialog"
+          aria-expanded={menuOpen}
+          aria-controls={menuOpen ? menuId : undefined}
+        >
+          Menu
+        </button>
+      )}
       <div className={styles.tabs}>
         {tabs.map((t) => {
           const active = activeId === t.id;
           return (
             <button
+              type="button"
               key={t.id}
               className={`${styles.tab} ${showLabels ? styles.tabLabeled : ''} ${active ? styles.active : ''}`}
-              onClick={() => onChange(t.id)}
+              onClick={() => selectTab(t.id)}
               title={t.label}
               aria-label={t.label}
+              aria-current={active ? 'page' : undefined}
             >
               {showLabels && <span className={styles.splatter} aria-hidden="true" />}
               {showLabels ? (
@@ -48,6 +86,43 @@ export default function TabBar<Id extends string>({
           );
         })}
       </div>
+      {showLabels && menuOpen && (
+        <div
+          id={menuId}
+          className={styles.mobileMenu}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={menuTitleId}
+        >
+          <h2 id={menuTitleId} className={styles.mobileMenuTitle}>Menu</h2>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className={styles.mobileMenuClose}
+            onClick={() => setMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            Close
+          </button>
+          <div className={styles.mobileMenuItems}>
+            {tabs.map((t) => {
+              const active = activeId === t.id;
+              return (
+                <button
+                  type="button"
+                  key={t.id}
+                  className={`${styles.mobileMenuItem} ${active ? styles.mobileMenuItemActive : ''}`}
+                  onClick={() => selectTab(t.id)}
+                  aria-current={active ? 'page' : undefined}
+                >
+                  <span className={styles.mobileSplatter} aria-hidden="true" />
+                  <span className={styles.mobileMenuLabel}>{t.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

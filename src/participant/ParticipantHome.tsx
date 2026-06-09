@@ -1,19 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { UserRound, FileUser, VenetianMask } from 'lucide-react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Info, UserRound, FileUser, VenetianMask } from 'lucide-react';
 import type { ParticipantRecord, RosterEntry, MyCharacter, PublicSettings } from '../types/participant';
 import { getMyRecord, updateMyRecord, getRoster, getMyCharacter } from '../lib/api';
+import { formatDishContribution } from '../lib/intakeSchema';
 import RecordFields from './RecordFields';
 import Typewriter from './Typewriter';
+import Moodboard from './Moodboard';
 import TabBar from '../components/TabBar/TabBar';
 import s from '../styles/ui.module.css';
 import sus from './Suspects.module.css';
+import about from './About.module.css';
+import participant from './participant.module.css';
 
-type Tab = 'you' | 'roster' | 'character';
+type Tab = 'you' | 'about' | 'roster' | 'character';
+const TAB_TITLE_TYPE_DELAY = 300;
 
 export default function ParticipantHome({ token, settings }: { token: string; settings: PublicSettings | null }) {
   const [rec, setRec] = useState<ParticipantRecord | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('you');
+  const [intakeSubmitted] = useState(
+    () => new URLSearchParams(window.location.search).get('submitted') === '1'
+  );
 
   useEffect(() => {
     let alive = true;
@@ -23,12 +32,20 @@ export default function ParticipantHome({ token, settings }: { token: string; se
     return () => { alive = false; };
   }, [token]);
 
+  useEffect(() => {
+    if (!intakeSubmitted) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('submitted');
+    window.history.replaceState({}, '', url.toString());
+  }, [intakeSubmitted]);
+
   if (loadError) return <Shell><p className={s.notice}>{loadError}</p></Shell>;
   if (!rec) return <Shell><p className={`${s.body} ${s.muted}`}>Loading your entry…</p></Shell>;
 
   const firstName = rec.preferred_name?.trim();
   const tabs = [
     { id: 'you' as const, label: firstName || 'You', Icon: UserRound },
+    { id: 'about' as const, label: 'About', Icon: Info },
     { id: 'roster' as const, label: 'Suspects', Icon: FileUser },
     { id: 'character' as const, label: 'Character', Icon: VenetianMask },
   ];
@@ -43,9 +60,12 @@ export default function ParticipantHome({ token, settings }: { token: string; se
         layoutId="participant-tab-pill"
       />
       <Shell>
-        {tab === 'you' && <EditEntry token={token} rec={rec} setRec={setRec} />}
-        {tab === 'roster' && <Roster token={token} visible={settings?.roster_visible ?? true} me={rec} />}
-        {tab === 'character' && <Character token={token} />}
+        <TabPanel tab={tab}>
+          {tab === 'you' && <EditEntry token={token} rec={rec} setRec={setRec} intakeSubmitted={intakeSubmitted} />}
+          {tab === 'about' && <About settings={settings} />}
+          {tab === 'roster' && <Roster token={token} visible={settings?.roster_visible ?? true} me={rec} />}
+          {tab === 'character' && <Character token={token} />}
+        </TabPanel>
       </Shell>
     </>
   );
@@ -59,7 +79,67 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-function EditEntry({ token, rec, setRec }: { token: string; rec: ParticipantRecord; setRec: (r: ParticipantRecord) => void }) {
+function TabPanel({ tab, children }: { tab: Tab; children: React.ReactNode }) {
+  const reduceMotion = useReducedMotion();
+
+  if (reduceMotion) return <div className={s.tabPanel}>{children}</div>;
+
+  return (
+    <motion.div
+      key={tab}
+      className={s.tabPanel}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function About({ settings: _settings }: { settings: PublicSettings | null }) {
+  return (
+    <>
+      <TabTitle text="About" />
+      <section className={`${s.section} ${about.aboutIntro}`}>
+        <div>
+          <p className={about.lede}>
+            A 1920s-1950s black and white film-inspired murder mystery built around a reunion,
+            a room full of suspects, and a little theatrical trouble.
+          </p>
+          <p className={about.lede}>
+            Everyone invited has a sense of humour, so bring the drama and the laughter. Dress
+            smart; this isn&apos;t a black tie event.
+          </p>
+        </div>
+        <dl className={about.details}>
+          <div>
+            <dt>Premise</dt>
+            <dd>Murder at a Reunion</dd>
+          </div>
+          <div>
+            <dt>Where</dt>
+            <dd>57 Wagon Trailway</dd>
+          </div>
+          <div>
+            <dt>When</dt>
+            <dd>July 11, after 7PM</dd>
+          </div>
+        </dl>
+      </section>
+
+      <h2 className={about.moodboardTitle}>Moodboard</h2>
+      <Moodboard variant="gallery" className={about.gallery} />
+    </>
+  );
+}
+
+function EditEntry({ token, rec, setRec, intakeSubmitted }: {
+  token: string;
+  rec: ParticipantRecord;
+  setRec: (r: ParticipantRecord) => void;
+  intakeSubmitted: boolean;
+}) {
   // Autosave: every edit schedules a debounced save (1200ms after last keystroke).
   // A 5s interval acts as a safety net so a long burst of edits still flushes.
   // A save in flight defers the next one until it returns; if more edits land
@@ -113,28 +193,25 @@ function EditEntry({ token, rec, setRec }: { token: string; rec: ParticipantReco
 
   const statusText =
     status === 'saving' ? 'Saving…' :
-    status === 'saved' ? 'Saved' :
     status === 'error' ? error || 'Save failed.' :
     '';
 
   return (
     <>
-      <h1 className={s.title}>
-        <Typewriter
-          text={rec.preferred_name?.trim() ? `${rec.preferred_name.trim()}'s file` : 'Your file'}
-          caret={false}
-        />
-      </h1>
-      <div className={s.section}>
-        <RecordFields rec={rec} patch={patch} />
-        {statusText && (
-          <p
-            className={status === 'error' ? s.notice : `${s.body} ${s.muted}`}
-            style={{ marginTop: 'var(--space-4)' }}
+      <TabTitle
+        text={rec.preferred_name?.trim() ? `${rec.preferred_name.trim()}'s file` : 'Your file'}
+        aside={statusText ? (
+          <span
+            className={`${participant.saveStatus} ${status === 'error' ? participant.saveStatusError : ''}`}
+            role={status === 'error' ? 'alert' : 'status'}
+            aria-live="polite"
           >
             {statusText}
-          </p>
-        )}
+          </span>
+        ) : null}
+      />
+      <div className={s.section}>
+        <RecordFields rec={rec} patch={patch} />
       </div>
     </>
   );
@@ -172,13 +249,13 @@ function Roster({ token, visible, me }: { token: string; visible: boolean; me: P
     return arr;
   }, [list, me.preferred_name, me.public_bio]);
 
-  if (!visible) return <><h1 className={s.title}><Typewriter text="Suspects" caret={false} /></h1><div className={s.section}><p className={s.notice}>The guest list is hidden for now — check back closer to the date.</p></div></>;
-  if (error) return <><h1 className={s.title}><Typewriter text="Suspects" caret={false} /></h1><div className={s.section}><p className={s.notice}>{error}</p></div></>;
-  if (!ordered) return <><h1 className={s.title}><Typewriter text="Suspects" caret={false} /></h1><div className={s.section}><p className={`${s.body} ${s.muted}`}>Loading guests…</p></div></>;
+  if (!visible) return <><TabTitle text="Suspects" /><div className={s.section}><p className={s.notice}>The guest list is hidden for now — check back closer to the date.</p></div></>;
+  if (error) return <><TabTitle text="Suspects" /><div className={s.section}><p className={s.notice}>{error}</p></div></>;
+  if (!ordered) return <><TabTitle text="Suspects" /><div className={s.section}><p className={`${s.body} ${s.muted}`}>Loading guests…</p></div></>;
 
   return (
     <>
-      <h1 className={s.title}><Typewriter text="Suspects" caret={false} /></h1>
+      <TabTitle text="Suspects" />
       <div className={`${s.section} ${sus.lineup}`}>
         {ordered.map((g, i) => (
           <SuspectCard key={i} guest={g} index={i} />
@@ -186,12 +263,6 @@ function Roster({ token, visible, me }: { token: string; visible: boolean; me: P
       </div>
     </>
   );
-}
-
-// Capitalize a single category token (e.g. "dessert" -> "Dessert").
-function titleCase(s: string): string {
-  const t = s.trim();
-  return t ? t[0].toUpperCase() + t.slice(1).toLowerCase() : '';
 }
 
 // Short, one-line name: full name if single word; "First L." for multi-part names.
@@ -208,12 +279,7 @@ function SuspectCard({ guest, index }: { guest: RosterEntry; index: number }) {
   const caseNum = String(index + 1).padStart(3, '0');
   // Economical contribution label: prefer the specific dish name; otherwise
   // list the selected categories. No "Bringing:" prefix.
-  const detail = (guest.dish_detail || '').trim();
-  const cats = (guest.dish_category || '')
-    .split(',')
-    .map((c) => titleCase(c))
-    .filter(Boolean);
-  const bringing = detail ? detail : cats.join(', ');
+  const bringing = formatDishContribution(guest);
   const name = shortenName(guest.preferred_name || '');
   // Stack-of-photos tilt + slight scale jitter: random per mount, stable
   // across re-renders within the same page load. Tilt -2..+2 deg, scale
@@ -325,7 +391,7 @@ function Character({ token }: { token: string }) {
   if (error) {
     return (
       <>
-        <h1 className={s.title}><Typewriter text={title} caret={false} /></h1>
+        <CharacterHeader title={title} />
         <div className={s.section}><p className={s.notice}>{error}</p></div>
       </>
     );
@@ -333,7 +399,7 @@ function Character({ token }: { token: string }) {
   if (!loaded) {
     return (
       <>
-        <h1 className={s.title}><Typewriter text={title} caret={false} /></h1>
+        <CharacterHeader title={title} />
         <div className={s.section}><p className={`${s.body} ${s.muted}`}>Checking…</p></div>
       </>
     );
@@ -341,7 +407,7 @@ function Character({ token }: { token: string }) {
   if (!char) {
     return (
       <>
-        <h1 className={s.title}><Typewriter text={title} caret={false} /></h1>
+        <CharacterHeader title={title} />
         <div className={s.section}>
           <p className={s.intro}>
             Your character hasn’t been revealed yet. Still weaving everyone’s stories together — you’ll see it here once casting is done.
@@ -353,7 +419,7 @@ function Character({ token }: { token: string }) {
 
   return (
     <>
-    <h1 className={s.title}><Typewriter text={title} caret={false} /></h1>
+    <CharacterHeader title={title} />
     <div className={s.section}>
     <div className={s.card}>
       <p className={`${s.body} ${s.muted}`}>{char.title}</p>
@@ -378,6 +444,21 @@ function Character({ token }: { token: string }) {
     </div>
     </div>
     </>
+  );
+}
+
+function CharacterHeader({ title }: { title: string }) {
+  return <TabTitle text={title} />;
+}
+
+function TabTitle({ text, aside }: { text: string; aside?: React.ReactNode }) {
+  return (
+    <div className={s.titleRow}>
+      <h1 className={s.title}>
+        <Typewriter text={text} caret={false} delay={TAB_TITLE_TYPE_DELAY} reserveLayout />
+      </h1>
+      {aside}
+    </div>
   );
 }
 

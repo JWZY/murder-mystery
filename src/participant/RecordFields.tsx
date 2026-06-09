@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import type { ParticipantRecord } from '../types/participant';
 import { INTAKE_QUESTIONS, type DishOption, type Question } from '../lib/intakeSchema';
+import AutoFitTextarea from './AutoFitTextarea';
 import s from './participant.module.css';
 
 type Patch = (p: Partial<ParticipantRecord>) => void;
@@ -29,21 +30,10 @@ function Text({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: P
 }
 
 function Area({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: Patch }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
   const value = String(rec[q.key] ?? '');
-  // Match the single-line input height by default; grow with content (and shrink
-  // back when cleared) by syncing height to scrollHeight whenever the value changes.
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = el.scrollHeight + 'px';
-  }, [value]);
   return (
-    <textarea
-      ref={ref}
+    <AutoFitTextarea
       className={s.tfArea}
-      rows={1}
       value={value}
       placeholder={q.placeholder ?? ' '}
       onChange={(e) => patch({ [q.key]: e.target.value } as Partial<ParticipantRecord>)}

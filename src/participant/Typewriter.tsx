@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useReducedMotion } from 'framer-motion';
 import s from './participant.module.css';
 
 // Animates text on mount only. After completion, live text updates pass through
@@ -9,47 +10,92 @@ export default function Typewriter({
   speed = 28,
   keepCaret = false,
   caret = true,
+  delay = 0,
+  reserveLayout = false,
+  onDone,
 }: {
   text: string;
   speed?: number;
   keepCaret?: boolean;
   caret?: boolean;
+  delay?: number;
+  reserveLayout?: boolean;
+  onDone?: () => void;
 }) {
   const initialTextRef = useRef(text);
+  const onDoneRef = useRef(onDone);
+  const finishedRef = useRef(false);
+  const reduceMotion = useReducedMotion();
   const [shown, setShown] = useState(0);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
+    onDoneRef.current = onDone;
+  }, [onDone]);
+
+  useEffect(() => {
     const t = initialTextRef.current;
-    if (!t) { setDone(true); return; }
+    const finish = () => {
+      if (finishedRef.current) return;
+      finishedRef.current = true;
+      setShown(t.length);
+      setDone(true);
+      onDoneRef.current?.();
+    };
+
+    if (reduceMotion || !t) {
+      finish();
+      return;
+    }
+
     let i = 0;
-    const id = window.setInterval(() => {
+    let intervalId: number | undefined;
+    const timeoutId = window.setTimeout(() => {
+      intervalId = window.setInterval(() => {
       i += 1;
       setShown(i);
       if (i >= t.length) {
-        window.clearInterval(id);
-        setDone(true);
+        if (intervalId) window.clearInterval(intervalId);
+        finish();
       }
-    }, speed);
-    return () => window.clearInterval(id);
-  }, [speed]);
+      }, speed);
+    }, delay);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (intervalId) window.clearInterval(intervalId);
+    };
+  }, [delay, reduceMotion, speed]);
+
+  if (reduceMotion) return <>{text}</>;
 
   if (done) {
-    return (
+    const content = (
       <>
         {text}
         {keepCaret && caret && <span className={s.tfCaret} data-done="true" aria-hidden>▍</span>}
       </>
     );
+    if (!reserveLayout) return content;
+    return <span className={s.typewriterReserve}>{content}</span>;
   }
 
   const initialText = initialTextRef.current;
   const finished = shown >= initialText.length;
   const showCaret = caret && (!finished || keepCaret);
-  return (
+  const content = (
     <>
       {initialText.slice(0, shown)}
       {showCaret && <span className={s.tfCaret} data-done={finished ? 'true' : 'false'} aria-hidden>▍</span>}
     </>
+  );
+
+  if (!reserveLayout) return content;
+
+  return (
+    <span className={s.typewriterReserve}>
+      <span aria-hidden className={s.typewriterGhost}>{text}</span>
+      <span className={s.typewriterText}>{content}</span>
+    </span>
   );
 }

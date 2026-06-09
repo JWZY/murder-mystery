@@ -1,0 +1,135 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: #050505;
+}
+
+.masonry {
+  position: absolute;
+  inset: -24vh -8vw -40vh;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(10px, 1.4vw, 18px);
+  opacity: 0.72;
+}
+
+.masonryColumn {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.4vw, 18px);
+  min-height: 150vh;
+}
+
+.masonryColumn2,
+.masonryColumn4 {
+  transform: translateY(54px);
+}
+
+.masonryColumn3 {
+  transform: translateY(-28px);
+}
+
+.masonryTile {
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 0;
+  background: var(--color-surface);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 20px 52px rgba(0, 0, 0, 0.72);
+  filter: grayscale(1) contrast(1.08) brightness(0.82);
+}
+
+.masonryTile img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.galleryTile img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(0, 0, 0, 0.06) 0 24%, rgba(0, 0, 0, 0.52) 56%, rgba(0, 0, 0, 0.82) 88%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.14) 42%, rgba(0, 0, 0, 0.72));
+  pointer-events: none;
+}
+
+.gallery {
+  column-count: 2;
+  column-gap: var(--space-5);
+}
+
+.galleryTile {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  margin: 0 0 var(--space-5);
+  overflow: hidden;
+  break-inside: avoid;
+  background: var(--color-surface);
+  border: none;
+  border-radius: 0;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.48);
+  filter: grayscale(1) contrast(1.08) brightness(0.84);
+  isolation: isolate;
+  vertical-align: top;
+}
+
+.galleryTile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7px),
+    radial-gradient(circle at 20% 18%, rgba(255, 255, 255, 0.12), transparent 22%),
+    radial-gradient(circle at 80% 92%, rgba(255, 255, 255, 0.08), transparent 26%);
+  mix-blend-mode: screen;
+  opacity: 0.32;
+}
+
+@media (max-width: 640px) {
+  .masonry {
+    inset: -22vh -20vw -42vh;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    opacity: 0.72;
+  }
+
+  .masonryColumn {
+    gap: 10px;
+    min-height: 150vh;
+  }
+
+  .masonryColumn2 {
+    transform: translateY(42px);
+  }
+
+  .masonryColumn3,
+  .masonryColumn4 {
+    display: none;
+  }
+
+  .veil {
+    background:
+      radial-gradient(circle at 50% 50%, rgba(0, 0, 0, 0.06) 0 24%, rgba(0, 0, 0, 0.7) 58%, rgba(0, 0, 0, 0.9) 84%),
+      linear-gradient(180deg, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.16) 42%, rgba(0, 0, 0, 0.76));
+  }
+
+  .gallery {
+    column-count: 1;
+    column-gap: var(--space-4);
+  }
+
+  .galleryTile {
+    margin-bottom: var(--space-4);
+  }
+}

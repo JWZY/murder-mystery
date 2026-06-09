@@ -1,7 +1,6 @@
 // Shapes shared between the intake form and the participant view. These mirror
 // the columns the RPCs in supabase/schema.sql actually return — keep in sync.
 
-export type MurdererAppetite = 'very' | 'maybe' | 'no';
 export type Rsvp = 'yes' | 'maybe' | 'no';
 export type DishCategory = 'appetizer' | 'main' | 'dessert' | 'side' | 'drink';
 
@@ -12,8 +11,6 @@ export interface ParticipantRecord {
   contact: string;
   roleplay_comfort: number | null; // 1–5
   trope_wishlist: string;
-  murderer_appetite: MurdererAppetite | null;
-  murdered_appetite: MurdererAppetite | null;
   dietary: string;
   dish_category: string | null; // comma-separated DishCategory values for multi-select
   dish_detail: string;
@@ -27,7 +24,9 @@ export interface ParticipantRecord {
   social_known: string;
   social_want: string;
   fakeable_skill: string;
-  reveal_dial: number | null; // 1–5 consent dial
+  reveal_dial: number | null; // 1–5: how much the character should be *them* (1 pure fiction → 5 basically them)
+  // Optional catch-all the participant fills at the end of intake.
+  notes: string;
   // public-facing
   public_bio: string;
   rsvp: Rsvp;
@@ -67,9 +66,9 @@ export interface PublicSettings {
 export function emptyRecord(): ParticipantRecord {
   return {
     preferred_name: '', contact: '', roleplay_comfort: null, trope_wishlist: '',
-    murderer_appetite: null, murdered_appetite: null, dietary: '', dish_category: null, dish_detail: '',
+    dietary: '', dish_category: null, dish_detail: '',
     hard_limits: '', surprise_fact: '', worst_job: '', hobby: '',
     changed_opinion: '', outable_secret: '', social_known: '', social_want: '',
-    fakeable_skill: '', reveal_dial: null, public_bio: '', rsvp: 'yes',
+    fakeable_skill: '', reveal_dial: null, notes: '', public_bio: '', rsvp: 'yes',
   };
 }

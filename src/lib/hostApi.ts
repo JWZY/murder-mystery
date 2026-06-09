@@ -27,6 +27,10 @@ export interface ParticipantFull extends ParticipantRecord {
   created_at: string;
 }
 
+export type HostAddInviteePayload = Partial<
+  Pick<ParticipantFull, 'preferred_name' | 'contact' | 'rsvp' | 'host_notes' | 'public_bio'>
+>;
+
 function guard() {
   if (!isConfigured) throw new NotConfiguredError();
 }
@@ -45,6 +49,17 @@ export async function hostParticipants(secret: string): Promise<ParticipantFull[
   const { data, error } = await supabase.rpc('host_participants', { p_secret: secret });
   if (error) throw error;
   return (data as ParticipantFull[]) ?? [];
+}
+
+/** Create a minimal invitee row before they submit intake. */
+export async function hostAddInvitee(
+  secret: string,
+  payload: HostAddInviteePayload,
+): Promise<ParticipantFull> {
+  guard();
+  const { data, error } = await supabase.rpc('host_add_invitee', { p_secret: secret, payload });
+  if (error) throw error;
+  return data as ParticipantFull;
 }
 
 /** Permanently delete a participant (smoke-test rows, withdrawals). */

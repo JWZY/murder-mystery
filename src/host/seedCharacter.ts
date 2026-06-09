@@ -64,12 +64,11 @@ export function seedCharacter(p: ParticipantFull, index = 0): Partial<CharacterF
 
   const truth_tags: TruthTag[] = open.map((s) => ({ beat: s.beat, truth: `${s.label}: ${s.value}` }));
 
-  // Host-only motive seeded from what they held back + their murderer appetite.
+  // Host-only motive seeded from what they held back.
   const motiveBits = held.map((s) => `${s.label}: ${s.value}`);
   const secret =
-    `(HOST DRAFT — not shown to player.) Murderer appetite: ${p.murderer_appetite ?? 'unknown'}. ` +
     (motiveBits.length ? `Held-back hooks you can use privately: ${motiveBits.join('; ')}. ` : '') +
-    `Seed a motive that lets them ${p.murderer_appetite === 'no' ? 'be a red herring, never the killer' : 'plausibly be the killer'}.`;
+    `Seed a motive that lets them plausibly be involved without deciding the murderer from intake answers.`;
 
   return {
     name,
@@ -124,8 +123,8 @@ function meetLine(p: ParticipantFull): string {
 /** A loose reunion-gala archetype from casting signals. Host can overwrite. */
 function pickArchetype(p: ParticipantFull): string {
   const comfort = p.roleplay_comfort ?? 3;
-  const wantsBig = p.murderer_appetite === 'very' || comfort >= 4;
-  const wantsSmall = p.murderer_appetite === 'no' || comfort <= 2;
+  const wantsBig = comfort >= 4;
+  const wantsSmall = comfort <= 2;
   if (wantsBig) return 'the one everyone expected to make it big';
   if (wantsSmall) return 'the quiet one who saw everything';
   return 'the one who never quite left town';

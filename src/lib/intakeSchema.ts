@@ -45,10 +45,10 @@ const DISH_LABEL: Record<string, string> = Object.fromEntries(
   DISH_OPTIONS.map((o) => [o.v, o.label])
 );
 
-const YES_NO: ChoiceOption[] = [
-  { v: 'very', label: 'Yes' },
-  { v: 'no', label: 'No' },
-];
+function humanizeToken(token: string): string {
+  const text = token.replace(/[_-]+/g, ' ').trim();
+  return text ? text[0].toUpperCase() + text.slice(1).toLowerCase() : '';
+}
 
 const COMFORT_CAPS = ['Extra', 'Cameo', 'Recurring', 'Supporting', 'Lead'];
 const COMFORT_DESCRIPTIONS = [
@@ -71,14 +71,14 @@ export const INTAKE_QUESTIONS: Question[] = [
   {
     key: 'dish_category',
     kind: 'dishes',
-    question: 'What dish did you bring to the gathering?',
+    question: 'Dish to bring for the potluck?',
     label: 'Bringing',
     dishOptions: DISH_OPTIONS,
   },
   {
     key: 'dietary',
     kind: 'text',
-    question: 'Known dietary restrictions, allergies, etc.',
+    question: 'Dietary restrictions, allergies, etc.',
     label: 'Dietary',
     placeholder: 'Allergies, restrictions, or none',
   },
@@ -94,25 +94,21 @@ export const INTAKE_QUESTIONS: Question[] = [
   {
     key: 'trope_wishlist',
     kind: 'area',
-    question: "Characters/tropes you've always wanted to play",
+    question: 'Characters/tropes you want to play',
     label: "Character/tropes you'd love to play",
-    placeholder: "Can write multiple, eg. detective, spy, pop star, rapper, director, gambler, boxer, etc",
+    desc: 'Share a loose vibe, archetype, name, bit, or backstory.',
+    placeholder: 'eg. Cole D. Case: detective; Paige Turner: journalist; Conny Condo: real estate mogul',
   },
+  // Retired for now:
+  // - murderer_appetite: 'Open to being the killer?'
+  // - murdered_appetite: 'Open to being the victim?'
   {
-    key: 'murderer_appetite',
-    kind: 'choice',
-    question: 'Were you the killer?',
-    label: 'Interested in being the murderer?',
-    options: YES_NO,
-    showIf: (r) => (r.roleplay_comfort ?? 0) >= 4,
-  },
-  {
-    key: 'murdered_appetite',
-    kind: 'choice',
-    question: 'Open to being the victim?',
-    label: 'Interested in getting murdered?',
-    options: YES_NO,
-    showIf: (r) => (r.roleplay_comfort ?? 0) >= 4,
+    key: 'surprise_fact',
+    kind: 'area',
+    question: 'How much should your character BE you?',
+    label: 'How much should your character BE you?',
+    desc: 'A real-life detail I can weave into the character, if you want guests to know the real you',
+    placeholder: 'eg. a surprise fact, niche obsession, worst job, small secret, strong opinion, life chapter, inside joke',
   },
   {
     key: 'hard_limits',
@@ -126,20 +122,33 @@ export const INTAKE_QUESTIONS: Question[] = [
 
 // ─── value formatting (for the host detail view) ─────────────────────────
 
-function describeDish(rec: ParticipantRecord): string {
-  const cats = (rec.dish_category ?? '').split(',').filter(Boolean);
+export function formatDishContribution(rec: Pick<ParticipantRecord, 'dish_category' | 'dish_detail'>): string {
+  const cats = (rec.dish_category ?? '').split(',').map((c) => c.trim()).filter(Boolean);
   let details: Record<string, string> = {};
   try {
     const parsed = JSON.parse(rec.dish_detail || '{}');
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      details = parsed as Record<string, string>;
+      details = Object.fromEntries(
+        Object.entries(parsed as Record<string, unknown>)
+          .filter(([, value]) => typeof value === 'string')
+          .map(([key, value]) => [key.toLowerCase(), value as string])
+      );
     }
-  } catch { /* legacy free-text dish_detail — render category only */ }
+  } catch {
+    const legacyDetail = (rec.dish_detail ?? '').trim();
+    if (legacyDetail) return legacyDetail;
+  }
+  if (!cats.length) {
+    return Object.values(details)
+      .map((d) => d.trim())
+      .filter(Boolean)
+      .join(' · ');
+  }
   return cats
     .map((c) => {
-      const label = DISH_LABEL[c] ?? c;
-      const d = (details[c] ?? '').trim();
-      return d ? `${label}: ${d}` : label;
+      const label = DISH_LABEL[c] ?? humanizeToken(c);
+      const d = (details[c.toLowerCase()] ?? '').trim();
+      return d || label;
     })
     .join(' · ');
 }
@@ -147,7 +156,7 @@ function describeDish(rec: ParticipantRecord): string {
 export function formatAnswer(q: Question, rec: ParticipantRecord): string {
   switch (q.kind) {
     case 'dishes':
-      return describeDish(rec);
+      return formatDishContribution(rec);
     case 'choice': {
       const v = rec[q.key];
       const match = q.options?.find((o) => o.v === v);
