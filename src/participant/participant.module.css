@@ -94,7 +94,7 @@
   color: var(--color-accent, currentColor);
   transform: translateY(-2px);
 }
-.tfCaret[data-done='true'] { animation: tfBlink 1s steps(1) infinite; }
+.tfCaret[data-done='true'] { animation: tfBlink 1s steps(1) 2; }
 @keyframes tfBlink { 50% { opacity: 0; } }
 .typewriterReserve {
   position: relative;
