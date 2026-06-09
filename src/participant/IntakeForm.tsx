@@ -85,7 +85,7 @@ function Area({ q, rec, patch, autoFocus }: {
 
 function ctaLabel(step: Step, busy = false): string {
   if (step.kind === 'welcome') return 'Start';
-  if (step.number === CHAPTER_COUNT) return busy ? 'Sending...' : 'Send answers';
+  if (step.number === CHAPTER_COUNT) return busy ? 'Submitting...' : 'Submit';
   return 'Next';
 }
 
@@ -290,7 +290,7 @@ export default function IntakeForm({ settings }: { settings: PublicSettings | nu
       {!success && (
         <div className={s.tfNav}>
           <button className={s.tfNavBtn} onClick={back} disabled={atFirst} aria-label="Previous">↑</button>
-          <button className={s.tfNavBtn} onClick={next} disabled={!canAdvance} aria-label={atFinalChapter ? 'Send answers' : 'Next'}>↓</button>
+          <button className={s.tfNavBtn} onClick={next} disabled={!canAdvance} aria-label={atFinalChapter ? 'Submit' : 'Next'}>↓</button>
         </div>
       )}
 

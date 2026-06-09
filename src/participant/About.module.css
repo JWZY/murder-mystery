@@ -58,7 +58,7 @@
 }
 
 .moodboardTitle {
-  margin: var(--space-8) 0 0;
+  margin: var(--space-10) 0 0;
   font-family: var(--font-heading);
   font-size: var(--text-heading);
   font-weight: var(--weight-body);

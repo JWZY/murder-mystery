@@ -104,12 +104,16 @@ function About({ settings: _settings }: { settings: PublicSettings | null }) {
       <section className={`${s.section} ${about.aboutIntro}`}>
         <div>
           <p className={about.lede}>
-            A 1920s-1950s black and white film-inspired murder mystery built around a reunion,
-            a room full of suspects, and a little theatrical trouble.
+            A tragic murder happens at a reunion, and secrets unravel.
           </p>
           <p className={about.lede}>
-            Everyone invited has a sense of humour, so bring the drama and the laughter. Dress
-            smart; this isn&apos;t a black tie event.
+            Film noir inspired. Think corrupt cops, hardboiled detective, broody monologues.
+          </p>
+          <p className={about.lede}>
+            Everyone here has a sense of humour, bring drama and bring laughter. 
+          </p>
+          <p className={about.lede}>
+            Dress smart-casual.
           </p>
         </div>
         <dl className={about.details}>

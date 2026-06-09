@@ -85,7 +85,7 @@ export const INTAKE_QUESTIONS: Question[] = [
   {
     key: 'roleplay_comfort',
     kind: 'scale',
-    question: 'How big of a role do you want? (level of comfort with roleplaying)',
+    question: 'How big of a role do you want? (comfort with roleplaying)',
     label: 'Role size',
     required: true,
     caps: COMFORT_CAPS,
@@ -105,9 +105,9 @@ export const INTAKE_QUESTIONS: Question[] = [
   {
     key: 'surprise_fact',
     kind: 'area',
-    question: 'How much should your character BE you?',
-    label: 'How much should your character BE you?',
-    desc: 'A real-life detail I can weave into the character, if you want guests to know the real you',
+    question: 'How much of your character is you?',
+    label: 'How much of your character is you?',
+    desc: 'Real-life details or facts to weave into the character',
     placeholder: 'eg. a surprise fact, niche obsession, worst job, small secret, strong opinion, life chapter, inside joke',
   },
   {
