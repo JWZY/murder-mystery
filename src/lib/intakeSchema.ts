@@ -32,7 +32,7 @@ export interface Question {
   dishOptions?: DishOption[];
 }
 
-const DISH_OPTIONS: DishOption[] = [
+export const DISH_OPTIONS: DishOption[] = [
   { v: 'appetizer', label: 'Appetizer', placeholder: 'What, exactly?' },
   { v: 'main', label: 'Main', placeholder: 'What, exactly?' },
   { v: 'side', label: 'Side', placeholder: 'What, exactly?' },

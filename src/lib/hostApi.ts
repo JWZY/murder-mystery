@@ -31,6 +31,22 @@ export type HostAddInviteePayload = Partial<
   Pick<ParticipantFull, 'preferred_name' | 'contact' | 'rsvp' | 'host_notes' | 'public_bio'>
 >;
 
+export type HostUpdateParticipantPayload = Partial<
+  Pick<
+    ParticipantFull,
+    | 'preferred_name'
+    | 'contact'
+    | 'rsvp'
+    | 'dish_category'
+    | 'dish_detail'
+    | 'dietary'
+    | 'public_bio'
+    | 'host_notes'
+    | 'character_id'
+    | 'is_murderer'
+  >
+>;
+
 function guard() {
   if (!isConfigured) throw new NotConfiguredError();
 }
@@ -58,6 +74,22 @@ export async function hostAddInvitee(
 ): Promise<ParticipantFull> {
   guard();
   const { data, error } = await supabase.rpc('host_add_invitee', { p_secret: secret, payload });
+  if (error) throw error;
+  return data as ParticipantFull;
+}
+
+/** Update host-editable participant fields from the guest list. */
+export async function hostUpdateParticipant(
+  secret: string,
+  id: string,
+  payload: HostUpdateParticipantPayload,
+): Promise<ParticipantFull> {
+  guard();
+  const { data, error } = await supabase.rpc('host_update_participant', {
+    p_secret: secret,
+    p_id: id,
+    payload,
+  });
   if (error) throw error;
   return data as ParticipantFull;
 }

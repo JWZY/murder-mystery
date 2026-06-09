@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import styles from './TabBar.module.css';
 
@@ -27,11 +27,9 @@ export default function TabBar<Id extends string>({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
   const menuTitleId = useId();
-  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!menuOpen) return;
-    closeButtonRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setMenuOpen(false);
     };
@@ -53,12 +51,13 @@ export default function TabBar<Id extends string>({
         <button
           type="button"
           className={styles.menuButton}
-          onClick={() => setMenuOpen(true)}
+          onClick={() => setMenuOpen((open) => !open)}
           aria-haspopup="dialog"
           aria-expanded={menuOpen}
           aria-controls={menuOpen ? menuId : undefined}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
         >
-          Menu
+          {menuOpen ? 'Close' : 'Menu'}
         </button>
       )}
       <div className={styles.tabs}>
@@ -95,15 +94,6 @@ export default function TabBar<Id extends string>({
           aria-labelledby={menuTitleId}
         >
           <h2 id={menuTitleId} className={styles.mobileMenuTitle}>Menu</h2>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            className={styles.mobileMenuClose}
-            onClick={() => setMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            Close
-          </button>
           <div className={styles.mobileMenuItems}>
             {tabs.map((t) => {
               const active = activeId === t.id;

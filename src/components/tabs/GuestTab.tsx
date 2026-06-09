@@ -1,15 +1,22 @@
 import { Fragment, type FormEvent, useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Clipboard, Plus, Trash2 } from 'lucide-react';
+import { Check, ChevronDown, Clipboard, Pencil, Plus, Trash2, X } from 'lucide-react';
 import {
   hostAddInvitee,
   hostBootstrap,
   hostDeleteParticipant,
+  hostUpdateParticipant,
   type HostWorld,
   type ParticipantFull,
 } from '../../lib/hostApi';
 import type { Rsvp } from '../../types/participant';
 import { useHost } from '../../host/hostContext';
-import { INTAKE_QUESTIONS, formatAnswer, formatDishContribution } from '../../lib/intakeSchema';
+import { updateMyRecord } from '../../lib/api';
+import {
+  DISH_OPTIONS,
+  INTAKE_QUESTIONS,
+  formatAnswer,
+  formatDishContribution,
+} from '../../lib/intakeSchema';
 import s from '../../styles/ui.module.css';
 import styles from './GuestTab.module.css';
 
@@ -17,6 +24,15 @@ type InviteeDraft = {
   preferred_name: string;
   contact: string;
   rsvp: Rsvp;
+  host_notes: string;
+};
+
+type RowDraft = {
+  preferred_name: string;
+  contact: string;
+  rsvp: Rsvp;
+  dish_category: string;
+  dish_detail: string;
   host_notes: string;
 };
 
@@ -36,6 +52,10 @@ export default function GuestTab() {
   const [savingInvitee, setSavingInvitee] = useState(false);
   const [inviteeError, setInviteeError] = useState('');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [rowDraft, setRowDraft] = useState<RowDraft | null>(null);
+  const [savingRowId, setSavingRowId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState('');
 
   useEffect(() => {
     hostBootstrap(secret).then(setWorld).catch(() => setError('Could not load the guest list.'));
@@ -56,6 +76,69 @@ export default function GuestTab() {
     setWorld((prev) =>
       prev ? { ...prev, participants: prev.participants.filter((x) => x.id !== p.id) } : prev
     );
+    if (editingId === p.id) cancelEdit();
+  }
+
+  function startEdit(p: ParticipantFull) {
+    setRowError('');
+    setEditingId(p.id);
+    setRowDraft({
+      preferred_name: p.preferred_name ?? '',
+      contact: p.contact ?? '',
+      rsvp: p.rsvp,
+      dish_category: p.dish_category ?? '',
+      dish_detail: p.dish_detail ?? '',
+      host_notes: p.host_notes ?? '',
+    });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setRowDraft(null);
+    setRowError('');
+  }
+
+  function updateRowDraft<K extends keyof RowDraft>(key: K, value: RowDraft[K]) {
+    setRowDraft((current) => current ? { ...current, [key]: value } : current);
+  }
+
+  async function saveRow(p: ParticipantFull) {
+    if (!rowDraft) return;
+    const name = rowDraft.preferred_name.trim();
+    const contact = rowDraft.contact.trim();
+    if (!name && !contact) {
+      setRowError('Keep a name or contact on the row.');
+      return;
+    }
+
+    setSavingRowId(p.id);
+    setRowError('');
+    try {
+      const payload = {
+        preferred_name: name,
+        contact,
+        rsvp: rowDraft.rsvp,
+        dish_category: rowDraft.dish_category.trim() || null,
+        dish_detail: rowDraft.dish_detail.trim(),
+        host_notes: rowDraft.host_notes.trim(),
+      };
+      const participant = await updateParticipantRow(secret, p, payload);
+      setWorld((prev) =>
+        prev
+          ? {
+              ...prev,
+              participants: prev.participants.map((existing) =>
+                existing.id === participant.id ? participant : existing
+              ),
+            }
+          : prev
+      );
+      cancelEdit();
+    } catch (e) {
+      setRowError(e instanceof Error ? e.message : 'Could not save that row.');
+    } finally {
+      setSavingRowId(null);
+    }
   }
 
   async function onAddInvitee(event: FormEvent<HTMLFormElement>) {
@@ -107,7 +190,7 @@ export default function GuestTab() {
   const charactersById = Object.fromEntries(world.characters.map((c) => [c.id, c]));
   const submitted = guests.filter(hasSubmittedIntake).length;
   const invitedOnly = guests.length - submitted;
-  const coming = guests.filter((g) => hasSubmittedIntake(g) && g.rsvp === 'yes').length;
+  const coming = guests.filter((g) => g.rsvp === 'yes').length;
   const rosterVisible = world.settings?.roster_visible ?? false;
 
   return (
@@ -170,6 +253,7 @@ export default function GuestTab() {
         Logged invitees get their own intake link. Send that row's link to update the same row; the blank public form creates a separate submission.
       </p>
       {inviteeError && <p className={`${s.notice} ${styles.addError}`}>{inviteeError}</p>}
+      {rowError && <p className={`${s.notice} ${styles.addError}`}>{rowError}</p>}
 
       <div className={styles.tableFrame}>
         <table className={styles.guestTable}>
@@ -196,6 +280,8 @@ export default function GuestTab() {
             {guests.map((g) => {
               const character = g.character_id ? charactersById[g.character_id] : null;
               const isOpen = expanded.has(g.id);
+              const isEditing = editingId === g.id && rowDraft;
+              const isSaving = savingRowId === g.id;
               const submittedRow = hasSubmittedIntake(g);
               const dish = formatDishContribution(g);
               const detailId = `guest-detail-${g.id}`;
@@ -208,51 +294,148 @@ export default function GuestTab() {
                 <Fragment key={g.id}>
                   <tr className={isOpen ? styles.openRow : undefined}>
                     <th scope="row">
-                      <button
-                        type="button"
-                        className={styles.rowToggle}
-                        onClick={() => toggle(g.id)}
-                        aria-expanded={isOpen}
-                        aria-controls={detailId}
-                      >
-                        <ChevronDown size={16} className={styles.chevron} aria-hidden="true" />
-                        <span>{displayName(g)}</span>
-                      </button>
+                      {isEditing ? (
+                        <input
+                          className={styles.tableInput}
+                          value={rowDraft.preferred_name}
+                          placeholder="Name"
+                          onChange={(e) => updateRowDraft('preferred_name', e.target.value)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.rowToggle}
+                          onClick={() => toggle(g.id)}
+                          aria-expanded={isOpen}
+                          aria-controls={detailId}
+                        >
+                          <ChevronDown size={16} className={styles.chevron} aria-hidden="true" />
+                          <span>{displayName(g)}</span>
+                        </button>
+                      )}
                     </th>
                     <td>
                       <span className={`${styles.status} ${submittedRow ? styles.statusSubmitted : styles.statusInvited}`}>
                         {rowStatus}
                       </span>
                     </td>
-                    <td>{submittedRow ? humanRsvp(g.rsvp) : `Expected ${humanRsvp(g.rsvp).toLowerCase()}`}</td>
-                    <td className={styles.truncate}>{g.contact || '—'}</td>
-                    <td className={styles.truncate}>{dish || 'TBD'}</td>
+                    <td>
+                      {isEditing ? (
+                        <select
+                          className={styles.tableSelect}
+                          value={rowDraft.rsvp}
+                          onChange={(e) => updateRowDraft('rsvp', e.target.value as Rsvp)}
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="maybe">Maybe</option>
+                          <option value="no">No</option>
+                        </select>
+                      ) : humanRsvp(g.rsvp)}
+                    </td>
+                    <td className={isEditing ? undefined : styles.truncate}>
+                      {isEditing ? (
+                        <input
+                          className={styles.tableInput}
+                          value={rowDraft.contact}
+                          placeholder="Contact"
+                          onChange={(e) => updateRowDraft('contact', e.target.value)}
+                        />
+                      ) : g.contact || '—'}
+                    </td>
+                    <td className={isEditing ? undefined : styles.truncate}>
+                      {isEditing ? (
+                        <div className={styles.dishEdit}>
+                          <select
+                            className={styles.tableSelect}
+                            value={rowDraft.dish_category}
+                            onChange={(e) => updateRowDraft('dish_category', e.target.value)}
+                            aria-label="Dish category"
+                          >
+                            <option value="">TBD</option>
+                            {DISH_OPTIONS.map((option) => (
+                              <option key={option.v} value={option.v}>{option.label}</option>
+                            ))}
+                          </select>
+                          <input
+                            className={styles.tableInput}
+                            value={rowDraft.dish_detail}
+                            placeholder="Dish detail"
+                            onChange={(e) => updateRowDraft('dish_detail', e.target.value)}
+                          />
+                        </div>
+                      ) : dish || 'TBD'}
+                    </td>
                     <td className={styles.truncate}>{playing || 'Uncast'}</td>
-                    <td className={styles.truncate}>{g.host_notes || g.notes || '—'}</td>
+                    <td className={isEditing ? undefined : styles.truncate}>
+                      {isEditing ? (
+                        <input
+                          className={styles.tableInput}
+                          value={rowDraft.host_notes}
+                          placeholder="Host notes"
+                          onChange={(e) => updateRowDraft('host_notes', e.target.value)}
+                        />
+                      ) : g.host_notes || g.notes || '—'}
+                    </td>
                     <td>
                       <div className={styles.rowActions}>
-                        <button
-                          type="button"
-                          className={styles.iconButton}
-                          onClick={() => copyInviteLink(g)}
-                          title={copiedId === g.id ? 'Copied' : 'Copy intake link'}
-                          aria-label={`Copy intake link for ${displayName(g)}`}
-                        >
-                          <Clipboard size={16} />
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.iconButton}
-                          onClick={() => onDelete(g)}
-                          title="Delete row"
-                          aria-label={`Delete ${displayName(g)}`}
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                        {isEditing ? (
+                          <>
+                            <button
+                              type="button"
+                              className={styles.iconButton}
+                              onClick={() => saveRow(g)}
+                              title="Save row"
+                              aria-label={`Save ${displayName(g)}`}
+                              disabled={isSaving}
+                            >
+                              <Check size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.iconButton}
+                              onClick={cancelEdit}
+                              title="Cancel editing"
+                              aria-label={`Cancel editing ${displayName(g)}`}
+                              disabled={isSaving}
+                            >
+                              <X size={16} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className={styles.iconButton}
+                              onClick={() => startEdit(g)}
+                              title="Edit row"
+                              aria-label={`Edit ${displayName(g)}`}
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.iconButton}
+                              onClick={() => copyInviteLink(g)}
+                              title={copiedId === g.id ? 'Copied' : 'Copy intake link'}
+                              aria-label={`Copy intake link for ${displayName(g)}`}
+                            >
+                              <Clipboard size={16} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.iconButton}
+                              onClick={() => onDelete(g)}
+                              title="Delete row"
+                              aria-label={`Delete ${displayName(g)}`}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
-                  {isOpen && (
+                  {isOpen && !isEditing && (
                     <tr className={styles.detailRow}>
                       <td id={detailId} colSpan={8}>
                         <Detail r={g} submitted={submittedRow} inviteLink={inviteLink(g)} />
@@ -267,6 +450,42 @@ export default function GuestTab() {
       </div>
     </Shell>
   );
+}
+
+async function updateParticipantRow(
+  secret: string,
+  participant: ParticipantFull,
+  payload: {
+    preferred_name: string;
+    contact: string;
+    rsvp: Rsvp;
+    dish_category: string | null;
+    dish_detail: string;
+    host_notes: string;
+  },
+): Promise<ParticipantFull> {
+  try {
+    return await hostUpdateParticipant(secret, participant.id, payload);
+  } catch (e) {
+    if (!isMissingHostUpdateRpc(e)) throw e;
+  }
+
+  await updateMyRecord(participant.token, {
+    preferred_name: payload.preferred_name,
+    contact: payload.contact,
+    rsvp: payload.rsvp,
+    dish_category: payload.dish_category,
+    dish_detail: payload.dish_detail,
+  });
+  return {
+    ...participant,
+    preferred_name: payload.preferred_name,
+    contact: payload.contact,
+    rsvp: payload.rsvp,
+    dish_category: payload.dish_category,
+    dish_detail: payload.dish_detail,
+    updated_at: new Date().toISOString(),
+  };
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -365,4 +584,23 @@ function hasSubmittedIntake(p: ParticipantFull): boolean {
     p.public_bio ||
     p.notes
   );
+}
+
+function isMissingHostUpdateRpc(e: unknown): boolean {
+  return getErrorText(e).includes('host_update_participant');
+}
+
+function getErrorText(e: unknown): string {
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'string') return e;
+  if (e && typeof e === 'object') {
+    const parts = ['message', 'details', 'hint']
+      .map((key) => {
+        const value = (e as Record<string, unknown>)[key];
+        return typeof value === 'string' ? value : '';
+      })
+      .filter(Boolean);
+    if (parts.length) return parts.join(' ');
+  }
+  return '';
 }
