@@ -1,5 +1,7 @@
 import styles from './Moodboard.module.css';
 
+const assetPath = (path: string) => `${import.meta.env.BASE_URL}${path.replace(/^\//, '')}`;
+
 export type MoodboardImage = {
   src: string;
   alt: string;
@@ -8,20 +10,20 @@ export type MoodboardImage = {
 };
 
 export const NOIR_MOODBOARD_IMAGES: MoodboardImage[] = [
-  { src: '/moodboard/noir-mood-07.jpg', alt: 'No Way Out film still', width: 1500, height: 900 },
-  { src: '/moodboard/noir-mood-08.jpg', alt: 'Film noir still', width: 1280, height: 720 },
-  { src: '/moodboard/noir-mood-06.jpg', alt: 'Classic noir poster portrait', width: 450, height: 681 },
-  { src: '/moodboard/noir-mood-02.png', alt: 'Noir detective scene with dramatic lighting', width: 3840, height: 2160 },
-  { src: '/moodboard/noir-mood-03.jpg', alt: 'Shadowed corridor with period costumes', width: 2373, height: 1350 },
-  { src: '/moodboard/noir-mood-04.jpg', alt: 'Vintage stage scene with formal attire', width: 4000, height: 2792 },
-  { src: '/moodboard/noir-mood-05.jpg', alt: 'Classic film noir close conversation', width: 450, height: 301 },
-  { src: '/moodboard/noir-mood-16.jpeg', alt: 'Moonlit rooftop figure in a red coat', width: 480, height: 360 },
-  { src: '/moodboard/noir-mood-09.jpg', alt: 'The Maltese Falcon still', width: 1280, height: 938 },
-  { src: '/moodboard/noir-mood-01.jpg', alt: 'Noir interior with silhouetted figures', width: 1920, height: 1080 },
-  { src: '/moodboard/noir-mood-12.jpg', alt: 'Gene Tierney in Laura', width: 960, height: 720 },
-  { src: '/moodboard/noir-mood-13.jpg', alt: 'Dana Andrews and Gene Tierney in Laura', width: 592, height: 478 },
-  { src: '/moodboard/noir-mood-14.jpg', alt: 'The Street with No Name still', width: 949, height: 717 },
-  { src: '/moodboard/noir-mood-15.jpg', alt: 'The Man Who Cheated Himself still', width: 627, height: 423 },
+  { src: assetPath('/moodboard/noir-mood-07.jpg'), alt: 'No Way Out film still', width: 1500, height: 900 },
+  { src: assetPath('/moodboard/noir-mood-08.jpg'), alt: 'Film noir still', width: 1280, height: 720 },
+  { src: assetPath('/moodboard/noir-mood-06.jpg'), alt: 'Classic noir poster portrait', width: 450, height: 681 },
+  { src: assetPath('/moodboard/noir-mood-02.png'), alt: 'Noir detective scene with dramatic lighting', width: 3840, height: 2160 },
+  { src: assetPath('/moodboard/noir-mood-03.jpg'), alt: 'Shadowed corridor with period costumes', width: 2373, height: 1350 },
+  { src: assetPath('/moodboard/noir-mood-04.jpg'), alt: 'Vintage stage scene with formal attire', width: 4000, height: 2792 },
+  { src: assetPath('/moodboard/noir-mood-05.jpg'), alt: 'Classic film noir close conversation', width: 450, height: 301 },
+  { src: assetPath('/moodboard/noir-mood-16.jpeg'), alt: 'Moonlit rooftop figure in a red coat', width: 480, height: 360 },
+  { src: assetPath('/moodboard/noir-mood-09.jpg'), alt: 'The Maltese Falcon still', width: 1280, height: 938 },
+  { src: assetPath('/moodboard/noir-mood-01.jpg'), alt: 'Noir interior with silhouetted figures', width: 1920, height: 1080 },
+  { src: assetPath('/moodboard/noir-mood-12.jpg'), alt: 'Gene Tierney in Laura', width: 960, height: 720 },
+  { src: assetPath('/moodboard/noir-mood-13.jpg'), alt: 'Dana Andrews and Gene Tierney in Laura', width: 592, height: 478 },
+  { src: assetPath('/moodboard/noir-mood-14.jpg'), alt: 'The Street with No Name still', width: 949, height: 717 },
+  { src: assetPath('/moodboard/noir-mood-15.jpg'), alt: 'The Man Who Cheated Himself still', width: 627, height: 423 },
 ];
 
 type Props = {
