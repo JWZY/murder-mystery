@@ -330,12 +330,12 @@ function Welcome({ title, name, onNameChange, onStart, canStart }: {
       <div className={s.tfWelcome}>
         <h1 className={s.tfTitle}><Typewriter text={title} keepCaret /></h1>
         <label className={s.tfWelcomeName}>
-          <span className={s.tfWelcomeLabel}>State your name for the record.</span>
           <input
             autoFocus
+            aria-label="State your name for the record."
             className={s.tfInput}
             value={name}
-            placeholder="What you go by"
+            placeholder="State your name for the record."
             onChange={(e) => onNameChange(e.target.value)}
           />
         </label>

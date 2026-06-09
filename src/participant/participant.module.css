@@ -283,7 +283,7 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 30px;
+  gap: var(--space-10);
   position: relative;
   z-index: 3;
 }
@@ -301,17 +301,6 @@
   width: min(100%, 420px);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-}
-.tfWelcomeLabel {
-  font-family: var(--font-heading);
-  font-size: var(--text-body-small);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-eyebrow);
-  line-height: var(--leading-snug);
-  text-transform: uppercase;
-  color: var(--color-text);
-  opacity: 0.78;
 }
 .tfTitle {
   font-family: var(--font-title);
@@ -396,7 +385,7 @@
 
   .tfWelcome {
     width: 100%;
-    gap: 24px;
+    gap: var(--space-10);
   }
 
   .tfWelcome::before {
