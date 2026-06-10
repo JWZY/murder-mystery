@@ -10,6 +10,8 @@ import type {
   ViewportState,
   IntakeFieldType,
 } from '../types/canvas';
+import type { CharacterFull, HostWorld, ParticipantFull } from '../lib/hostApi';
+import { formatDishContribution } from '../lib/intakeSchema';
 import type { SnapGuide } from '../utils/snapGuides';
 import { seed } from './seed';
 
@@ -29,6 +31,166 @@ function uid(): string {
   } catch {
     return `id-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
   }
+}
+
+function sourceNodeId(participantId: string): string {
+  return `participant-${participantId}`;
+}
+
+function displayName(p: ParticipantFull): string {
+  return p.preferred_name?.trim() || p.contact?.trim() || 'Unnamed guest';
+}
+
+function hasSubmittedIntake(p: ParticipantFull): boolean {
+  return Boolean(
+    p.roleplay_comfort != null ||
+      p.reveal_dial != null ||
+      p.dish_category ||
+      p.dish_detail ||
+      p.dietary ||
+      p.trope_wishlist ||
+      p.hard_limits ||
+      p.surprise_fact ||
+      p.public_bio ||
+      p.notes,
+  );
+}
+
+function roleFromParticipant(p: ParticipantFull): string {
+  if (p.trope_wishlist?.trim()) return 'Wants: ' + p.trope_wishlist.trim();
+  const comfort = p.roleplay_comfort;
+  if (comfort != null) return `Role comfort ${comfort}/5`;
+  return hasSubmittedIntake(p) ? 'Submitted source' : 'Invited guest';
+}
+
+function sourceDigest(p: ParticipantFull): string {
+  const parts = [
+    p.public_bio && `Public bio: ${p.public_bio}`,
+    p.trope_wishlist && `Character wish: ${p.trope_wishlist}`,
+    p.surprise_fact && `Truth hook: ${p.surprise_fact}`,
+    p.notes && `Notes: ${p.notes}`,
+  ].filter(Boolean);
+  return parts.join('\n') || 'No planning notes submitted yet.';
+}
+
+function privateSourceNotes(p: ParticipantFull): string {
+  const parts = [
+    p.hard_limits && `Boundaries: ${p.hard_limits}`,
+    p.dietary && `Dietary: ${p.dietary}`,
+    p.host_notes && `Host notes: ${p.host_notes}`,
+  ].filter(Boolean);
+  return parts.join('\n');
+}
+
+function storyActsFromWorld(world: HostWorld): StoryAct[] {
+  if (world.story_acts.length) {
+    return world.story_acts.map((act) => ({
+      id: act.id,
+      title: act.title || `Act ${act.position + 1}`,
+      notes: act.notes,
+    }));
+  }
+
+  const submitted = world.participants.filter(hasSubmittedIntake);
+  const cast = world.participants.filter((p) => p.character_id).length;
+  const released = world.characters.filter((c) => c.released).length;
+  const roleSignals = submitted
+    .map((p) => {
+      const name = displayName(p);
+      const comfort = p.roleplay_comfort != null ? `comfort ${p.roleplay_comfort}/5` : null;
+      const dial = p.reveal_dial != null ? `truth dial ${p.reveal_dial}/5` : null;
+      return [name, comfort, dial].filter(Boolean).join(' - ');
+    })
+    .filter(Boolean)
+    .join('\n');
+  const wishes = submitted
+    .map((p) => p.trope_wishlist?.trim())
+    .filter(Boolean)
+    .join('\n');
+  const truthHooks = submitted
+    .map((p) => p.surprise_fact?.trim())
+    .filter(Boolean)
+    .join('\n');
+  const boundaries = submitted
+    .map((p) => p.hard_limits?.trim())
+    .filter(Boolean)
+    .join('\n');
+
+  return [
+    {
+      id: 'source-act-arrival',
+      title: 'Act I - Arrivals',
+      notes: roleSignals || 'Waiting for submitted role comfort and truth-dial signals.',
+    },
+    {
+      id: 'source-act-casting',
+      title: 'Act II - Casting Hooks',
+      notes: wishes || 'Use submitted trope wishes here as character cards are drafted.',
+    },
+    {
+      id: 'source-act-truth',
+      title: 'Act III - Truth Hooks',
+      notes: truthHooks || 'Use consented real-life hooks here once they are submitted.',
+    },
+    {
+      id: 'source-act-release',
+      title: 'Act IV - Release Plan',
+      notes: [
+        `${cast}/${world.participants.length} guests cast.`,
+        `${released}/${world.characters.length} cards released.`,
+        boundaries ? `Boundaries to respect:\n${boundaries}` : null,
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
+    },
+  ];
+}
+
+function premiseFromWorld(world: HostWorld): string {
+  const submitted = world.participants.filter(hasSubmittedIntake).length;
+  const title = world.settings?.party_title?.trim() || 'Murder mystery';
+  const blurb = world.settings?.party_blurb?.trim();
+  return [
+    title,
+    blurb,
+    `${submitted}/${world.participants.length} guest entries submitted for planning.`,
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+function characterNodeFromSource({
+  id,
+  character,
+  participant,
+  index,
+}: {
+  id: string;
+  character: CharacterFull | null;
+  participant: ParticipantFull | null;
+  index: number;
+}): CharacterItem {
+  const col = index % 4;
+  const row = Math.floor(index / 4);
+  const fallbackX = 180 + col * 300;
+  const fallbackY = 180 + row * 190;
+  const hasBackendPosition = Boolean(character && (character.x !== 0 || character.y !== 0));
+
+  return {
+    id,
+    type: 'character',
+    name: character?.name || (participant ? displayName(participant) : 'New Character'),
+    role: character?.title || (participant ? roleFromParticipant(participant) : 'Unassigned role'),
+    bio: character?.background || (participant ? sourceDigest(participant) : ''),
+    secret: [character?.secret, participant ? privateSourceNotes(participant) : ''].filter(Boolean).join('\n\n'),
+    color: character?.color || PALETTE[index % PALETTE.length],
+    guestId: participant?.id ?? null,
+    x: hasBackendPosition ? character!.x : fallbackX,
+    y: hasBackendPosition ? character!.y : fallbackY,
+    width: NODE_W,
+    height: NODE_H,
+    zIndex: index + 1,
+  };
 }
 
 // ─── Persistence ──────────────────────────────────────────────────────
@@ -112,6 +274,9 @@ interface MysteryState extends PersistedState {
   // story actions
   updateAct: (id: string, patch: Partial<StoryAct>) => void;
   updatePremise: (text: string) => void;
+
+  // host source projection
+  syncFromHostWorld: (world: HostWorld) => void;
 }
 
 function persist(s: MysteryState) {
@@ -405,6 +570,80 @@ export const useCanvasStore = create<MysteryState>()(
       updatePremise: (text) => {
         set((s) => {
           s.premise = text;
+        });
+        persist(get());
+      },
+
+      syncFromHostWorld: (world) => {
+        set((s) => {
+          const participantsByCharacter = new Map(
+            world.participants
+              .filter((p) => p.character_id)
+              .map((p) => [p.character_id as string, p]),
+          );
+          const usedIds = new Set<string>();
+          const nextCharacters: Record<string, CharacterItem> = {};
+          const nextGuests: Record<string, Guest> = {};
+          const nextGuestOrder: string[] = [];
+          let index = 0;
+
+          for (const p of world.participants) {
+            nextGuests[p.id] = {
+              id: p.id,
+              name: displayName(p),
+              dish: formatDishContribution(p),
+              characterId: p.character_id,
+              rsvp: p.rsvp === 'yes' || p.rsvp === 'no' || p.rsvp === 'maybe' ? p.rsvp : 'maybe',
+            };
+            nextGuestOrder.push(p.id);
+          }
+
+          for (const character of world.characters) {
+            const participant = participantsByCharacter.get(character.id) ?? null;
+            const id = character.id;
+            usedIds.add(id);
+            nextCharacters[id] = characterNodeFromSource({
+              id,
+              character,
+              participant,
+              index,
+            });
+            index += 1;
+          }
+
+          for (const participant of world.participants) {
+            if (participant.character_id) continue;
+            const id = sourceNodeId(participant.id);
+            usedIds.add(id);
+            nextCharacters[id] = characterNodeFromSource({
+              id,
+              character: null,
+              participant,
+              index,
+            });
+            index += 1;
+          }
+
+          const nextRelationships: Record<string, Relationship> = {};
+          for (const r of world.relationships) {
+            if (!usedIds.has(r.from_char) || !usedIds.has(r.to_char)) continue;
+            nextRelationships[r.id] = {
+              id: r.id,
+              from: r.from_char,
+              to: r.to_char,
+              label: r.label,
+            };
+          }
+
+          s.characters = nextCharacters;
+          s.itemOrder = Object.keys(nextCharacters);
+          s.relationships = nextRelationships;
+          s.guests = nextGuests;
+          s.guestOrder = nextGuestOrder;
+          s.acts = storyActsFromWorld(world);
+          s.premise = premiseFromWorld(world);
+          if (s.selectedId && !nextCharacters[s.selectedId]) s.selectedId = null;
+          if (s.connectingFrom && !nextCharacters[s.connectingFrom]) s.connectingFrom = null;
         });
         persist(get());
       },

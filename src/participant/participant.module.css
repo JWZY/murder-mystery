@@ -385,6 +385,13 @@
   margin: 0;
 }
 
+.pageScroll {
+  position: relative;
+  inset: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
 @media (max-width: 640px) {
   .tfStage {
     padding: clamp(92px, 13vh, 132px) 20px 120px;
@@ -461,8 +468,7 @@
   }
 
   .tfMobileBack,
-  .tfMobilePrimary,
-  .tfMobileSaveStatus {
+  .tfMobilePrimary {
     position: absolute;
     top: 50%;
     font-family: var(--font-heading);
@@ -493,22 +499,30 @@
   }
   .tfMobilePrimary:disabled { opacity: 0.35; cursor: not-allowed; }
 
-  .tfMobileSaveStatus {
+  .tfMobileAudio {
+    position: absolute;
+    top: 50%;
     right: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     transform: translateY(-50%);
-    max-width: calc(50vw - 42px);
-    overflow: hidden;
-    text-align: right;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-size: var(--text-body-small);
-    font-weight: var(--weight-bold);
-    opacity: 0.55;
-    pointer-events: none;
+    width: 44px;
+    height: 44px;
+    padding: 4px;
+    color: var(--color-text);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
+    opacity: 0.72;
+    transition: opacity var(--transition-fast), filter var(--transition-fast);
   }
-  .tfMobileSaveStatus[data-state='error'] {
-    color: var(--color-required);
-    opacity: 0.92;
+  .tfMobileAudio:hover,
+  .tfMobileAudio:focus-visible {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
+    opacity: 1;
+    outline: none;
   }
 }
 
@@ -536,25 +550,6 @@
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
   color: var(--color-text);
-}
-
-.saveStatus {
-  flex: 0 0 auto;
-  align-self: flex-start;
-  margin-top: 0.2em;
-  font-family: var(--font-heading);
-  font-size: var(--text-body-small);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-eyebrow);
-  line-height: var(--leading-flush);
-  text-transform: uppercase;
-  color: var(--color-text);
-  opacity: 0.62;
-}
-
-.saveStatusError {
-  opacity: 1;
-  color: var(--color-required);
 }
 
 /* Inputs use the body face whether empty or filled — consistency over
@@ -585,10 +580,4 @@
   position: absolute;
   opacity: 0;
   pointer-events: none;
-}
-
-@media (max-width: 640px) {
-  .saveStatus {
-    margin-top: 0;
-  }
 }

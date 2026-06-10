@@ -9,7 +9,11 @@ import ZoomSlider from '../ZoomSlider/ZoomSlider';
 import styles from '../Canvas/Canvas.module.css';
 import graph from './CharacterGraph.module.css';
 
-export default function CharacterGraph() {
+interface Props {
+  autoFitKey?: number;
+}
+
+export default function CharacterGraph({ autoFitKey = 0 }: Props) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -26,13 +30,18 @@ export default function CharacterGraph() {
   const connectingFrom = useCanvasStore((s) => s.connectingFrom);
   const cancelConnecting = useCanvasStore((s) => s.cancelConnecting);
   const closeOpenFolder = useCanvasStore((s) => s.closeOpenFolder);
-  const addCharacter = useCanvasStore((s) => s.addCharacter);
 
   const { onPointerDown, onPointerMove, onPointerUp } = useCanvasDrag({ applyTransform });
   const { zoomIn, zoomOut, zoomToStep, resetZoom, zoomToFit } = useZoom({
     applyTransform,
     viewportRef,
   });
+
+  useEffect(() => {
+    if (!autoFitKey || items.length === 0) return;
+    const raf = requestAnimationFrame(() => zoomToFit());
+    return () => cancelAnimationFrame(raf);
+  }, [autoFitKey, items.length, zoomToFit]);
 
   const onDoubleClick = useCallback(
     (e: React.MouseEvent) => {
@@ -103,10 +112,6 @@ export default function CharacterGraph() {
           <kbd>Esc</kbd>
         </div>
       )}
-
-      <button className={graph.addBtn} data-ui onClick={() => addCharacter()}>
-        + Character
-      </button>
 
       <ZoomSlider
         onZoomIn={zoomIn}

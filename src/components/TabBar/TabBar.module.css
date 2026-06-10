@@ -60,6 +60,14 @@
   display: none;
 }
 
+.mobileBottomControls {
+  display: contents;
+}
+
+.audioButton {
+  display: none;
+}
+
 .tab {
   position: relative;
   display: inline-flex;
@@ -73,8 +81,6 @@
   color: var(--color-text);
   transition: color var(--transition-fast);
 }
-
-.tab:hover { color: var(--color-text); }
 
 /* Icon-only (host) active state: tint the icon with the accent so it stands
    out — no ink behind it. */
@@ -112,8 +118,12 @@
   transition: opacity 220ms ease-out;
 }
 
-.tabLabeled:hover .splatter { opacity: 0.18; }
 .tabLabeled.active .splatter { opacity: 1; }
+
+@media (hover: hover) and (pointer: fine) {
+  .tab:not(.active):hover { color: var(--color-text); }
+  .tabLabeled:not(.active):hover .splatter { opacity: 0.18; }
+}
 
 .tabIcon {
   position: relative;
@@ -227,8 +237,42 @@
     transition: opacity var(--transition-fast);
   }
 
-  .menuButton:hover {
+  .mobileBottomControls {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    width: 100%;
+    padding: 0 var(--space-5);
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+  }
+
+  .mobileBottomControls .menuButton {
+    grid-column: 2;
+  }
+
+  .audioButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    grid-column: 3;
+    justify-self: end;
+    width: 44px;
+    height: 44px;
+    padding: 4px;
+    color: var(--color-text);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-pill);
+    cursor: pointer;
     opacity: 0.72;
+    transition: opacity var(--transition-fast), filter var(--transition-fast);
+  }
+
+  .audioButton:focus-visible {
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
+    opacity: 1;
+    outline: none;
   }
 
   .menuOpen::before {
@@ -248,13 +292,24 @@
     padding: max(28px, env(safe-area-inset-top, 0px)) var(--space-5)
       max(40px, env(safe-area-inset-bottom, 0px));
     color: var(--color-text);
+    visibility: hidden;
     background:
       radial-gradient(circle at 16% 22%, rgba(255, 255, 255, 0.08) 0 1px, transparent 2px),
       radial-gradient(circle at 76% 72%, rgba(255, 255, 255, 0.06) 0 1px, transparent 2px),
       linear-gradient(180deg, rgba(21, 16, 12, 0.98), rgba(2, 2, 2, 0.98) 62%, rgba(0, 0, 0, 1));
     -webkit-backdrop-filter: blur(18px);
             backdrop-filter: blur(18px);
-    animation: menuFadeIn 180ms ease-out;
+    contain: paint;
+    isolation: isolate;
+    pointer-events: none;
+    transform: translateZ(0);
+    transition: visibility 0s linear 140ms;
+  }
+
+  .mobileMenuOpen {
+    visibility: visible;
+    pointer-events: auto;
+    transition-delay: 0s;
   }
 
   .mobileMenu::before {
@@ -290,6 +345,16 @@
     justify-content: center;
     gap: clamp(20px, 4.8vh, 34px);
     padding: 84px 0 32px;
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+    transition: opacity 140ms ease-out, transform 140ms ease-out;
+    will-change: opacity, transform;
+  }
+
+  .mobileMenuOpen .mobileMenuItems {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition-duration: 180ms;
   }
 
   .mobileMenuItem {
@@ -305,10 +370,6 @@
     border: none;
     cursor: pointer;
     transition: opacity var(--transition-fast), transform var(--transition-fast);
-  }
-
-  .mobileMenuItem:hover {
-    transform: translateY(-1px);
   }
 
   .mobileMenuItemActive {
@@ -338,12 +399,29 @@
     transition: opacity 180ms ease-out;
   }
 
-  .mobileMenuItem:hover .mobileSplatter {
-    opacity: 0.16;
-  }
-
   .mobileMenuItemActive .mobileSplatter {
     opacity: 1;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .audioButton:hover,
+    .audioButton:focus-visible {
+      filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
+      opacity: 1;
+      outline: none;
+    }
+
+    .menuButton:hover {
+      opacity: 0.72;
+    }
+
+    .mobileMenuItem:not(.mobileMenuItemActive):hover {
+      transform: translateY(-1px);
+    }
+
+    .mobileMenuItem:not(.mobileMenuItemActive):hover .mobileSplatter {
+      opacity: 0.16;
+    }
   }
 
   .mobileMenuLabel {
@@ -363,17 +441,6 @@
   @media (max-width: 360px) {
     .mobileMenuLabel {
       font-size: 29px;
-    }
-  }
-
-  @keyframes menuFadeIn {
-    from {
-      opacity: 0;
-      transform: translateY(8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
     }
   }
 }

@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
+    "ag-grid-community": "^35.3.1",
+    "ag-grid-react": "^35.3.1",
     "framer-motion": "^12.38.0",
     "immer": "^11.1.4",
     "lucide-react": "^1.17.0",

@@ -7,7 +7,7 @@
   z-index: var(--z-controls);
   display: flex;
   flex-direction: column;
-  background: var(--color-surface);
+  background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card-drag);
@@ -32,10 +32,14 @@
 }
 
 .close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 50%;
-  font-size: var(--text-body);
+  border-radius: 0;
+  border: none;
+  background: transparent;
   color: var(--color-text);
 }
 
@@ -97,11 +101,9 @@
 .refBox {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: var(--space-4);
-  background: var(--color-bg);
-  border: 1px dashed var(--color-border);
-  border-radius: var(--radius-md);
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
 }
 
 .refHint {
@@ -110,23 +112,65 @@
   line-height: var(--leading-snug);
 }
 
-.refList {
-  list-style: none;
+.sourceList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: 4px;
+  gap: var(--space-3);
 }
 
-.refItem {
+.sourceCard {
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.sourceCard h3 {
+  font-family: var(--font-heading);
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-heading);
+  line-height: var(--leading-snug);
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.sourceMeta {
+  margin: var(--space-1) 0 0;
   font-size: var(--text-body-small);
   color: var(--color-text);
+  line-height: var(--leading-snug);
+  opacity: 0.78;
+}
+
+.answerList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+}
+
+.answerList div {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.refIntent {
+.answerList dt {
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  line-height: var(--leading-snug);
+  text-transform: uppercase;
   color: var(--color-text);
-  font-style: italic;
+  opacity: 0.76;
+}
+
+.answerList dd {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
 }

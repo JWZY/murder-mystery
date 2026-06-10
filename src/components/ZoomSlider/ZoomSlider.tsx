@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Minus, Plus } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore';
 import {
   ZOOM_STEPS,
@@ -123,9 +124,7 @@ export default function ZoomSlider({ onZoomIn, onZoomOut, onZoomToStep, onResetZ
             aria-label="Zoom out"
             tabIndex={-1}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M3 7h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <Minus size={18} />
           </button>
 
           {/* Track */}
@@ -172,9 +171,7 @@ export default function ZoomSlider({ onZoomIn, onZoomOut, onZoomToStep, onResetZ
             aria-label="Zoom in"
             tabIndex={-1}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 3v8M3 7h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-            </svg>
+            <Plus size={18} />
           </button>
 
           {/* Percentage label */}

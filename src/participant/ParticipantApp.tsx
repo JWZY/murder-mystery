@@ -84,7 +84,7 @@ export default function ParticipantApp() {
 
 function RecoveryState({ onResetSession }: { onResetSession: (mode?: 'push' | 'replace') => void }) {
   return (
-    <div className={s.page}>
+    <div className={`${s.page} ${participant.pageScroll}`}>
       <div className={s.inner}>
         <div className={`${s.notice} ${participant.recovery}`}>
           <p>This entry was removed or the link is no longer valid.</p>

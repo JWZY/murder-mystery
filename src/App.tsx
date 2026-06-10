@@ -10,7 +10,7 @@ import SettingsTab from './host/SettingsTab';
 import { HostGate } from './host/hostContext';
 import ParticipantApp from './participant/ParticipantApp';
 import SmokeAmbience from './components/SmokeAmbience/SmokeAmbience';
-import AmbientAudio from './components/AmbientAudio/AmbientAudio';
+import { AmbientAudioProvider, AmbientAudioToggle } from './components/AmbientAudio/AmbientAudio';
 import type { TabId } from './types/canvas';
 
 /**
@@ -35,12 +35,12 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHashChange);
   }, []);
   return (
-    <>
+    <AmbientAudioProvider>
       <SmokeAmbience />
-      <AmbientAudio />
+      <AmbientAudioToggle />
       {route === 'host' && <HostApp />}
       {route === 'participant' && <ParticipantApp />}
-    </>
+    </AmbientAudioProvider>
   );
 }
 

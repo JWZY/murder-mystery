@@ -7,24 +7,21 @@
 
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: var(--space-3);
+  padding: 8px 2px;
 
-  background: var(--color-surface-glass, rgba(255, 255, 255, 0.55));
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg, 12px);
-  box-shadow:
-    0 2px 16px var(--color-shadow, rgba(0, 0, 0, 0.08));
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 
   user-select: none;
   pointer-events: auto;
-  transition: border-color var(--transition-fast, 120ms ease);
+  transition: opacity var(--transition-fast);
 }
 
 .container:hover {
-  border-color: var(--color-accent);
+  opacity: 0.86;
 }
 
 /* ─── Step buttons (−/+) ─────────────────────────────────── */
@@ -32,21 +29,19 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   border: none;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: 0;
   background: transparent;
   color: var(--color-text);
   cursor: pointer;
   padding: 0;
-  transition: color var(--transition-fast, 120ms ease),
-              background var(--transition-fast, 120ms ease);
+  transition: opacity var(--transition-fast);
 }
 
 .stepButton:hover {
-  color: var(--color-text);
-  background: var(--color-surface-hover);
+  opacity: 0.72;
 }
 
 .stepButton:active {
@@ -72,7 +67,7 @@
   top: 50%;
   height: 2px;
   transform: translateY(-50%);
-  background: var(--color-border);
+  background: var(--color-border-strong);
   border-radius: 1px;
 }
 
@@ -89,8 +84,8 @@
   top: 50%;
   height: 2px;
   transform: translateY(-50%);
-  background: var(--color-accent);
-  opacity: 0.4;
+  background: var(--color-text);
+  opacity: 1;
   border-radius: 1px;
   pointer-events: none;
 }
@@ -100,9 +95,9 @@
   position: absolute;
   top: 50%;
   width: 1px;
-  height: 6px;
+  height: 8px;
   transform: translate(-0.5px, -50%);
-  background: var(--color-border);
+  background: var(--color-border-strong);
   pointer-events: none;
 }
 
@@ -116,8 +111,8 @@
   margin-left: -6px;
   margin-top: -6px;
   border-radius: 50%;
-  background: var(--color-accent);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  background: var(--color-text);
+  box-shadow: 0 0 0 4px var(--color-bg);
   pointer-events: none;
   will-change: transform;
 }
@@ -128,22 +123,23 @@
   align-items: center;
   justify-content: center;
   min-width: 38px;
-  height: 24px;
+  height: 32px;
   padding: 0 4px;
   border: none;
-  border-radius: var(--radius-sm, 4px);
+  border-radius: 0;
   background: transparent;
   color: var(--color-text);
   font-size: var(--text-body-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
   font-family: inherit;
   cursor: pointer;
-  transition: color var(--transition-fast, 120ms ease),
-              background var(--transition-fast, 120ms ease);
+  transition: opacity var(--transition-fast);
   overflow: hidden;
 }
 
 .percentLabel:hover {
-  color: var(--color-text);
-  background: var(--color-surface-hover);
+  opacity: 0.72;
 }

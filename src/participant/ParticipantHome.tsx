@@ -106,7 +106,7 @@ export default function ParticipantHome({
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className={s.page}>
+    <div className={`${s.page} ${participant.pageScroll}`}>
       <div className={s.inner}>{children}</div>
     </div>
   );
@@ -181,9 +181,6 @@ function EditEntry({ token, rec, setRec, intakeSubmitted }: {
   // A 5s interval acts as a safety net so a long burst of edits still flushes.
   // A save in flight defers the next one until it returns; if more edits land
   // during that window, we re-flush once the in-flight save completes.
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [error, setError] = useState<string | null>(null);
-
   const recRef = useRef(rec);
   recRef.current = rec;
   const dirtyRef = useRef(false);
@@ -194,28 +191,22 @@ function EditEntry({ token, rec, setRec, intakeSubmitted }: {
     if (savingRef.current || !dirtyRef.current) return;
     dirtyRef.current = false;
     savingRef.current = true;
-    setStatus('saving');
-    setError(null);
     try {
       await updateMyRecord(token, recRef.current);
       savingRef.current = false;
       if (dirtyRef.current) {
         flush();
-      } else {
-        setStatus('saved');
       }
     } catch (e) {
       savingRef.current = false;
       dirtyRef.current = true;
-      setStatus('error');
-      setError(e instanceof Error ? e.message : 'Save failed.');
+      console.error(e);
     }
   }, [token]);
 
   const patch = useCallback((p: Partial<ParticipantRecord>) => {
     setRec({ ...recRef.current, ...p });
     dirtyRef.current = true;
-    setStatus('saving');
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(() => flush(), 1200);
   }, [flush, setRec]);
@@ -228,24 +219,10 @@ function EditEntry({ token, rec, setRec, intakeSubmitted }: {
     };
   }, [flush]);
 
-  const statusText =
-    status === 'saving' ? 'Saving…' :
-    status === 'error' ? error || 'Save failed.' :
-    '';
-
   return (
     <>
       <TabTitle
         text={rec.preferred_name?.trim() ? `${rec.preferred_name.trim()}'s file` : 'Your file'}
-        aside={statusText ? (
-          <span
-            className={`${participant.saveStatus} ${status === 'error' ? participant.saveStatusError : ''}`}
-            role={status === 'error' ? 'alert' : 'status'}
-            aria-live="polite"
-          >
-            {statusText}
-          </span>
-        ) : null}
       />
       <div className={s.section}>
         <RecordFields rec={rec} patch={patch} />

@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { AmbientAudioToggle } from '../AmbientAudio/AmbientAudio';
 import styles from './TabBar.module.css';
 
 export type TabBarItem<Id extends string = string> = {
@@ -48,17 +49,20 @@ export default function TabBar<Id extends string>({
       data-ui
     >
       {showLabels && (
-        <button
-          type="button"
-          className={styles.menuButton}
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-haspopup="dialog"
-          aria-expanded={menuOpen}
-          aria-controls={menuOpen ? menuId : undefined}
-          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
-        >
-          {menuOpen ? 'Close' : 'Menu'}
-        </button>
+        <div className={styles.mobileBottomControls}>
+          <button
+            type="button"
+            className={styles.menuButton}
+            onClick={() => setMenuOpen((open) => !open)}
+            aria-haspopup="dialog"
+            aria-expanded={menuOpen}
+            aria-controls={menuId}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          >
+            {menuOpen ? 'Close' : 'Menu'}
+          </button>
+          <AmbientAudioToggle className={styles.audioButton} />
+        </div>
       )}
       <div className={styles.tabs}>
         {tabs.map((t) => {
@@ -85,13 +89,14 @@ export default function TabBar<Id extends string>({
           );
         })}
       </div>
-      {showLabels && menuOpen && (
+      {showLabels && (
         <div
           id={menuId}
-          className={styles.mobileMenu}
-          role="dialog"
-          aria-modal="true"
+          className={`${styles.mobileMenu} ${menuOpen ? styles.mobileMenuOpen : ''}`}
+          role={menuOpen ? 'dialog' : undefined}
+          aria-modal={menuOpen ? true : undefined}
           aria-labelledby={menuTitleId}
+          aria-hidden={!menuOpen}
         >
           <h2 id={menuTitleId} className={styles.mobileMenuTitle}>Menu</h2>
           <div className={styles.mobileMenuItems}>

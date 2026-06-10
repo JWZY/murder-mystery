@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { Link, Trash2, X } from 'lucide-react';
 import { useCanvasStore } from '../../store/canvasStore';
 import styles from './Inspector.module.css';
 
@@ -50,7 +51,7 @@ export default function Inspector() {
               ))}
             </div>
             <button className={styles.close} onClick={() => select(null)} aria-label="Close">
-              ×
+              <X size={18} />
             </button>
           </header>
 
@@ -121,7 +122,8 @@ export default function Inspector() {
             <div className={styles.connHeader}>
               <span className={styles.label}>Connections</span>
               <button className={styles.connectBtn} onClick={() => startConnecting(c.id)}>
-                + connect
+                <Link size={16} />
+                Connect
               </button>
             </div>
             {connections.length === 0 && (
@@ -142,7 +144,7 @@ export default function Inspector() {
                     onChange={(e) => updateRel(r.id, e.target.value)}
                   />
                   <button className={styles.connDel} onClick={() => delRel(r.id)} aria-label="Remove">
-                    ×
+                    <X size={15} />
                   </button>
                 </div>
               );
@@ -150,6 +152,7 @@ export default function Inspector() {
           </div>
 
           <button className={styles.delete} onClick={() => del(c.id)}>
+            <Trash2 size={16} />
             Delete character
           </button>
         </motion.aside>

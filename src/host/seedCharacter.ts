@@ -42,7 +42,7 @@ function dialName(d: number): string {
   return ['', 'Mask', 'Veil', 'Half-mask', 'Open face', 'Wig'][d] ?? 'Veil';
 }
 
-/** Build a strong first-draft character card from a participant + the theme. */
+/** Build a private character card from a participant + the theme. */
 export function seedCharacter(p: ParticipantFull, index = 0): Partial<CharacterFull> {
   const dial = p.reveal_dial ?? 2;
   const all = sources(p);
@@ -50,7 +50,7 @@ export function seedCharacter(p: ParticipantFull, index = 0): Partial<CharacterF
   const held = all.filter((s) => s.value && dial < s.minDial); // host-only, kept back
 
   const name = p.preferred_name || 'New Guest';
-  const archetype = pickArchetype(p);
+  const concept = characterConcept(p);
 
   // Player-visible background weaves the OPEN truths into the gala fiction.
   const woven = open
@@ -58,7 +58,7 @@ export function seedCharacter(p: ParticipantFull, index = 0): Partial<CharacterF
     .map((s) => `Word at the reunion is they're ${truthClause(s)}.`)
     .join(' ');
   const background =
-    `${name} arrives at the reunion gala as ${archetype}. ` +
+    `${name} arrives at the reunion gala with this submitted character direction: ${concept}. ` +
     (woven ? woven + ' ' : '') +
     `They haven't been back in years, and everyone has a theory about why.`;
 
@@ -72,7 +72,7 @@ export function seedCharacter(p: ParticipantFull, index = 0): Partial<CharacterF
 
   return {
     name,
-    title: archetype,
+    title: concept,
     background,
     act1:
       `ARRIVAL (late afternoon, front rooms). Reconnect with two people. ` +
@@ -101,6 +101,14 @@ export function seedCharacter(p: ParticipantFull, index = 0): Partial<CharacterF
   };
 }
 
+export function characterConcept(p: ParticipantFull): string {
+  return p.trope_wishlist?.trim() || 'Character concept pending';
+}
+
+export function isGeneratedArchetype(value: string | null | undefined): boolean {
+  return Boolean(value && GENERATED_ARCHETYPES.has(value.trim()));
+}
+
 function truthClause(s: Source): string {
   // Make the label read naturally inside the gala rumor mill.
   switch (s.label) {
@@ -120,12 +128,8 @@ function meetLine(p: ParticipantFull): string {
   return `Find someone you've never really talked to.`;
 }
 
-/** A loose reunion-gala archetype from casting signals. Host can overwrite. */
-function pickArchetype(p: ParticipantFull): string {
-  const comfort = p.roleplay_comfort ?? 3;
-  const wantsBig = comfort >= 4;
-  const wantsSmall = comfort <= 2;
-  if (wantsBig) return 'the one everyone expected to make it big';
-  if (wantsSmall) return 'the quiet one who saw everything';
-  return 'the one who never quite left town';
-}
+const GENERATED_ARCHETYPES = new Set([
+  'the one everyone expected to make it big',
+  'the quiet one who saw everything',
+  'the one who never quite left town',
+]);

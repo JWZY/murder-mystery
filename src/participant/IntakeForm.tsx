@@ -10,6 +10,7 @@ import Typewriter from './Typewriter';
 import Moodboard from './Moodboard';
 import AutoFitTextarea from './AutoFitTextarea';
 import SmokeAmbience from '../components/SmokeAmbience/SmokeAmbience';
+import { AmbientAudioToggle } from '../components/AmbientAudio/AmbientAudio';
 import { INTAKE_DRAFT_KEY } from './session';
 
 type IntakeKey = keyof ParticipantRecord;
@@ -121,11 +122,6 @@ function hasDraftContent(rec: ParticipantRecord, consents: boolean[], idx: numbe
       if (typeof value === 'string') return value.trim().length > 0;
       return value != null;
     });
-}
-
-function draftStatusLabel(status: DraftStatus): string | null {
-  if (status === 'saving') return 'Saving...';
-  return null;
 }
 
 export default function IntakeForm({ settings }: { settings: PublicSettings | null }) {
@@ -305,11 +301,7 @@ export default function IntakeForm({ settings }: { settings: PublicSettings | nu
           >
             {ctaLabel(step, busy)}
           </button>
-          {draftStatusLabel(draftStatus) && (
-            <span className={s.tfMobileSaveStatus} data-state={draftStatus} aria-live="polite">
-              {draftStatusLabel(draftStatus)}
-            </span>
-          )}
+          <AmbientAudioToggle className={s.tfMobileAudio} />
         </div>
       )}
     </div>

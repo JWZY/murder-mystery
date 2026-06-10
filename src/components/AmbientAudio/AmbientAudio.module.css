@@ -1,51 +1,100 @@
-/* Text CTA in the bottom-left (desktop) / top-right (mobile) corner.
-   Visual vocabulary mirrors .reset from DevReset.module.css, but in the
-   primary text color rather than destructive red. */
-.muteBtn {
-  position: fixed;
-  bottom: max(var(--space-4), env(safe-area-inset-bottom, 0px));
-  left: var(--space-5);
-  z-index: var(--z-overlay);
-
+.vinylButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 6px 2px;
-
-  font-family: var(--font-heading);
-  font-size: var(--text-body);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-heading);
-  line-height: var(--leading-flush);
-  text-transform: uppercase;
-
+  width: 44px;
+  height: 44px;
+  padding: 4px;
   color: var(--color-text);
   background: transparent;
   border: none;
-  border-radius: 0;
+  border-radius: var(--radius-pill);
   cursor: pointer;
-  white-space: nowrap;
-  text-decoration: underline;
-  text-decoration-color: var(--color-text);
-  text-underline-offset: 6px;
-
-  opacity: 0.55;
-  transition: opacity var(--transition-fast);
+  opacity: 0.42;
+  transition: opacity var(--transition-fast), filter var(--transition-fast);
 }
 
-.muteBtn:hover,
-.muteBtn:focus-visible {
-  opacity: 1;
+.vinylButton.playing {
+  opacity: 0.95;
+}
+
+.muteBtn {
+  position: fixed;
+  top: max(var(--space-4), env(safe-area-inset-top, 0px));
+  right: var(--space-5);
+  z-index: calc(var(--z-overlay) + 1);
+}
+
+.vinylButton:hover,
+.vinylButton:focus-visible {
+  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
   outline: none;
 }
 
+.vinylDisc,
+.vinylSpin,
+.vinylIcon {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.vinylDisc,
+.vinylSpin {
+  transform-origin: center;
+}
+
+.vinylDisc {
+  transform: scale(0.86);
+  transition: transform 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.playing .vinylDisc {
+  transform: scale(1);
+}
+
+.vinylButton:hover .vinylDisc,
+.vinylButton:focus-visible .vinylDisc {
+  transform: scale(1.05);
+}
+
+.vinylIcon {
+  transform-origin: center;
+}
+
+.vinylSpin {
+  animation: vinylSpin 9s linear infinite;
+  animation-play-state: paused;
+}
+
+.playing .vinylSpin {
+  animation-play-state: running;
+}
+
+@keyframes vinylSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 640px) {
-  /* Move to top-right on mobile so it doesn't collide with the bottom-floating
-     tab bar. */
   .muteBtn {
-    top: max(var(--space-4), env(safe-area-inset-top, 0px));
-    bottom: auto;
-    left: auto;
-    right: var(--space-5);
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinylDisc {
+    transition: none;
+  }
+
+  .vinylButton:hover .vinylDisc,
+  .vinylButton:focus-visible .vinylDisc,
+  .playing .vinylDisc {
+    transform: none;
+  }
+
+  .vinylSpin {
+    animation: none;
   }
 }
