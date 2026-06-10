@@ -374,6 +374,17 @@
 
 .tfMobileBar { display: none; }
 
+.recovery {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+.recovery p {
+  margin: 0;
+}
+
 @media (max-width: 640px) {
   .tfStage {
     padding: clamp(92px, 13vh, 132px) 20px 120px;

@@ -16,9 +16,20 @@ import participant from './participant.module.css';
 type Tab = 'you' | 'about' | 'roster' | 'character';
 const TAB_TITLE_TYPE_DELAY = 300;
 
-export default function ParticipantHome({ token, settings }: { token: string; settings: PublicSettings | null }) {
+export default function ParticipantHome({
+  token,
+  settings,
+  onMissingRecord,
+  onResetSession,
+}: {
+  token: string;
+  settings: PublicSettings | null;
+  onMissingRecord: () => void;
+  onResetSession: (mode?: 'push' | 'replace') => void;
+}) {
   const [rec, setRec] = useState<ParticipantRecord | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [recordMissing, setRecordMissing] = useState(false);
   const [tab, setTab] = useState<Tab>('you');
   const [intakeSubmitted] = useState(
     () => new URLSearchParams(window.location.search).get('submitted') === '1'
@@ -27,10 +38,19 @@ export default function ParticipantHome({ token, settings }: { token: string; se
   useEffect(() => {
     let alive = true;
     getMyRecord(token)
-      .then((r) => { if (alive) { if (r) setRec(r); else setLoadError('We couldn’t find your entry — double-check your link.'); } })
+      .then((r) => {
+        if (!alive) return;
+        if (r) {
+          setRec(r);
+          return;
+        }
+        onMissingRecord();
+        setRecordMissing(true);
+        setLoadError('This entry was removed or the link is no longer valid.');
+      })
       .catch((e) => { if (alive) setLoadError(e instanceof Error ? e.message : 'Failed to load.'); });
     return () => { alive = false; };
-  }, [token]);
+  }, [onMissingRecord, token]);
 
   useEffect(() => {
     if (!intakeSubmitted) return;
@@ -39,7 +59,20 @@ export default function ParticipantHome({ token, settings }: { token: string; se
     window.history.replaceState({}, '', url.toString());
   }, [intakeSubmitted]);
 
-  if (loadError) return <Shell><p className={s.notice}>{loadError}</p></Shell>;
+  if (loadError) {
+    return (
+      <Shell>
+        <div className={`${s.notice} ${participant.recovery}`}>
+          <p>{loadError}</p>
+          {recordMissing && (
+            <button type="button" className={s.btn} onClick={() => onResetSession()}>
+              Start over
+            </button>
+          )}
+        </div>
+      </Shell>
+    );
+  }
   if (!rec) return <Shell><p className={`${s.body} ${s.muted}`}>Loading your entry…</p></Shell>;
 
   const firstName = rec.preferred_name?.trim();

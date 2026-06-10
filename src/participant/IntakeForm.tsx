@@ -10,6 +10,7 @@ import Typewriter from './Typewriter';
 import Moodboard from './Moodboard';
 import AutoFitTextarea from './AutoFitTextarea';
 import SmokeAmbience from '../components/SmokeAmbience/SmokeAmbience';
+import { INTAKE_DRAFT_KEY } from './session';
 
 type IntakeKey = keyof ParticipantRecord;
 type ChapterStep = { kind: 'chapter'; number: number; questions: Question[] };
@@ -20,8 +21,6 @@ type IntakeDraft = {
   consents?: boolean[];
   idx?: number;
 };
-
-const DRAFT_KEY = 'mm.intake.draft';
 
 // House rules the participant must acknowledge before the form will submit.
 // Edit this list to add/rename items; the final chapter auto-requires all of them.
@@ -99,7 +98,7 @@ function questionAnswered(q: Question, rec: ParticipantRecord): boolean {
 
 function readDraft(): IntakeDraft | null {
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
+    const raw = localStorage.getItem(INTAKE_DRAFT_KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw) as IntakeDraft;
     return draft && typeof draft === 'object' ? draft : null;
@@ -179,7 +178,7 @@ export default function IntakeForm({ settings }: { settings: PublicSettings | nu
       const url = new URL(window.location.href);
       url.searchParams.set('p', token);
       url.searchParams.set('submitted', '1');
-      localStorage.removeItem(DRAFT_KEY);
+      localStorage.removeItem(INTAKE_DRAFT_KEY);
       setDraftStatus('idle');
       setSuccess(allowPartial ? 'Saved for later.' : "We'll be in touch.");
       window.setTimeout(() => {
@@ -216,7 +215,7 @@ export default function IntakeForm({ settings }: { settings: PublicSettings | nu
     if (draftTimer.current) window.clearTimeout(draftTimer.current);
     draftTimer.current = window.setTimeout(() => {
       try {
-        localStorage.setItem(DRAFT_KEY, JSON.stringify({ rec, consents, idx }));
+        localStorage.setItem(INTAKE_DRAFT_KEY, JSON.stringify({ rec, consents, idx }));
         setDraftStatus('saved');
       } catch {
         setDraftStatus('error');
