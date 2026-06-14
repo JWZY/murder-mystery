@@ -431,19 +431,39 @@ function Character({ token }: { token: string }) {
     );
   }
 
+  // Two-phase reveal. Consent: just the concept, framed as a "does this work for
+  // you?" sign-off — no acts, no secret action. Full: the whole script.
+  const consent = char.phase === 'consent';
+
   return (
     <>
     <CharacterHeader title={title} />
     <div className={s.section}>
+    {consent && (
+      <p className={s.intro}>
+        Here’s the character we have in mind for you. Have a read — does this feel like someone you’d enjoy playing? Reply to let me know, and we can shape it together before the rest is revealed.
+      </p>
+    )}
     <div className={s.card}>
       <p className={`${s.body} ${s.muted}`}>{char.title}</p>
 
       <Act label="Who you are" body={char.background} />
-      <Act label="Act I — Arrival" body={char.act1} />
-      <Act label="Act II — The Catalyst" body={char.act2} />
-      <Act label="Act III — The Reckoning" body={char.act3} />
-      {char.recommended_meets && <Act label="People to seek out" body={char.recommended_meets} />}
-      {char.props && <Act label="Props / what to bring" body={char.props} />}
+
+      {!consent && (
+        <>
+          <Act label="Act I — Arrival" body={char.act1 ?? ''} />
+          <Act label="Act II — The Catalyst" body={char.act2 ?? ''} />
+          <Act label="Act III — The Reckoning" body={char.act3 ?? ''} />
+          {char.recommended_meets && <Act label="People to seek out" body={char.recommended_meets} />}
+          {char.props && <Act label="Props / what to bring" body={char.props} />}
+          {char.action && (
+            <>
+              <p className={s.bodyBold} style={{ marginTop: 'var(--space-5)' }}>Your secret action</p>
+              <p className={s.body} style={{ marginTop: 'var(--space-2)', whiteSpace: 'pre-wrap' }}>{char.action}</p>
+            </>
+          )}
+        </>
+      )}
 
       {char.truth_tags?.length > 0 && (
         <>

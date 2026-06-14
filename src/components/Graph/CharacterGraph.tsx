@@ -4,8 +4,6 @@ import { useCanvasDrag } from '../../hooks/useCanvasDrag';
 import { useZoom } from '../../hooks/useZoom';
 import CharacterNode from './CharacterNode';
 import EdgeLayer from './EdgeLayer';
-import SnapGuides from '../Canvas/SnapGuides';
-import ZoomSlider from '../ZoomSlider/ZoomSlider';
 import styles from '../Canvas/Canvas.module.css';
 import graph from './CharacterGraph.module.css';
 
@@ -27,12 +25,14 @@ export default function CharacterGraph({ autoFitKey = 0 }: Props) {
   const storeItems = useCanvasStore((s) => s.characters);
   const items = itemIds.map((id) => storeItems[id]).filter(Boolean);
   const draggingId = useCanvasStore((s) => s.draggingId);
-  const connectingFrom = useCanvasStore((s) => s.connectingFrom);
-  const cancelConnecting = useCanvasStore((s) => s.cancelConnecting);
+  const connecting = useCanvasStore((s) => s.connect != null);
+  const cancelConnect = useCanvasStore((s) => s.cancelConnect);
   const closeOpenFolder = useCanvasStore((s) => s.closeOpenFolder);
+  const selectedEdgeId = useCanvasStore((s) => s.selectedEdgeId);
+  const deleteRelationship = useCanvasStore((s) => s.deleteRelationship);
 
   const { onPointerDown, onPointerMove, onPointerUp } = useCanvasDrag({ applyTransform });
-  const { zoomIn, zoomOut, zoomToStep, resetZoom, zoomToFit } = useZoom({
+  const { zoomIn, zoomOut, resetZoom, zoomToFit } = useZoom({
     applyTransform,
     viewportRef,
   });
@@ -59,8 +59,13 @@ export default function CharacterGraph({ autoFitKey = 0 }: Props) {
         return;
 
       if (e.key === 'Escape') {
-        if (connectingFrom) cancelConnecting();
+        if (connecting) cancelConnect();
         else closeOpenFolder();
+        return;
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEdgeId) {
+        e.preventDefault();
+        deleteRelationship(selectedEdgeId);
         return;
       }
       const mod = e.metaKey || e.ctrlKey;
@@ -70,7 +75,7 @@ export default function CharacterGraph({ autoFitKey = 0 }: Props) {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [connectingFrom, cancelConnecting, closeOpenFolder, zoomIn, zoomOut, resetZoom]);
+  }, [connecting, cancelConnect, closeOpenFolder, selectedEdgeId, deleteRelationship, zoomIn, zoomOut, resetZoom]);
 
   // Sync store-driven viewport changes (panToFocus) to the DOM.
   useEffect(() => {
@@ -84,41 +89,23 @@ export default function CharacterGraph({ autoFitKey = 0 }: Props) {
   }, [applyTransform]);
 
   return (
-    <>
-      <div
-        ref={viewportRef}
-        className={`${styles.viewport} ${draggingId ? styles.isDragging : ''} ${
-          connectingFrom ? graph.connecting : ''
-        }`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onDoubleClick={onDoubleClick}
-      >
-        <div ref={canvasRef} className={styles.canvas}>
-          <EdgeLayer />
-          {items.map((item) => (
-            <CharacterNode key={item.id} item={item} />
-          ))}
-          <SnapGuides />
-        </div>
+    <div
+      ref={viewportRef}
+      className={`${styles.viewport} ${draggingId ? styles.isDragging : ''} ${
+        connecting ? graph.connecting : ''
+      }`}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onDoubleClick={onDoubleClick}
+    >
+      <div ref={canvasRef} className={styles.canvas}>
+        <EdgeLayer />
+        {items.map((item) => (
+          <CharacterNode key={item.id} item={item} />
+        ))}
       </div>
-
-      {connectingFrom && (
-        <div className={graph.connectBanner} data-ui>
-          Click another character to connect — or
-          <button onClick={cancelConnecting}>cancel</button>
-          <kbd>Esc</kbd>
-        </div>
-      )}
-
-      <ZoomSlider
-        onZoomIn={zoomIn}
-        onZoomOut={zoomOut}
-        onZoomToStep={zoomToStep}
-        onResetZoom={resetZoom}
-      />
-    </>
+    </div>
   );
 }

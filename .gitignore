@@ -13,6 +13,9 @@ dist
 # Private reference data — real people's past responses. NEVER commit/publish.
 Murder Mystery Planning/
 
+# AI-bridge working dir — `npm run export:world` dumps real intake answers here.
+planning/
+
 # Local design/effects reference dumps — not part of the build.
 ink-effects/
 smoke-and-blood/

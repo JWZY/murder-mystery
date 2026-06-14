@@ -33,6 +33,15 @@ export interface ParticipantRecord {
   updated_at?: string;
 }
 
+/**
+ * One anonymous row behind the intake potluck hints. No identity — just the dish
+ * columns — so it can be read on the open intake form without a token.
+ */
+export interface PotluckRow {
+  dish_category: string | null;
+  dish_detail: string;
+}
+
 /** The curated partial view of another guest. */
 export interface RosterEntry {
   preferred_name: string;
@@ -42,18 +51,30 @@ export interface RosterEntry {
   rsvp: Rsvp;
 }
 
-/** The fiction a player is allowed to see for their own character. */
+/**
+ * The fiction a player is allowed to see for their own character.
+ *
+ * Revealed in two phases (see supabase/casting-phase2.sql `get_my_character`):
+ *   - `consent` — name, title, background, truth_tags only. No plot.
+ *   - `full`    — adds acts, action, props, recommended_meets.
+ * The plot fields are therefore optional; `secret` (host-only motive) is never
+ * sent in either phase.
+ */
 export interface MyCharacter {
+  phase: 'consent' | 'full';
   name: string;
   title: string;
   background: string;
-  act1: string;
-  act2: string;
-  act3: string;
-  props: string;
-  recommended_meets: string;
   truth_tags: { beat?: string; truth?: string }[];
   color: string;
+  // full-phase only
+  act1?: string;
+  act2?: string;
+  act3?: string;
+  /** The secret action handed to the player at the party. */
+  action?: string;
+  props?: string;
+  recommended_meets?: string;
 }
 
 export interface PublicSettings {

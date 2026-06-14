@@ -121,12 +121,18 @@ export interface CharacterFull {
   act1: string;
   act2: string;
   act3: string;
+  /** Party-time secret instruction — revealed only at full release. */
+  action: string;
   secret: string;
   props: string;
   recommended_meets: string;
   truth_tags: TruthTag[];
+  /** One-line hook the host riffs on in the canvas. Host-facing only. */
+  juice: string;
   color: string;
   released: boolean;
+  /** Consent stage: the archetype + background have been sent to the player. */
+  background_released: boolean;
   x: number;
   y: number;
   created_at?: string;
@@ -199,6 +205,24 @@ export async function hostAssign(
     p_participant: participantId,
     p_character: characterId,
   });
+  if (error) throw error;
+  return Boolean(data);
+}
+
+/** Upsert a relationship edge. Pass `id` (client UUID) to update or insert-on-id. Returns id. */
+export async function hostSaveRelationship(
+  secret: string,
+  payload: { id?: string; from_char: string; to_char: string; label?: string },
+): Promise<string> {
+  guard();
+  const { data, error } = await supabase.rpc('host_save_relationship', { p_secret: secret, payload });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function hostDeleteRelationship(secret: string, id: string): Promise<boolean> {
+  guard();
+  const { data, error } = await supabase.rpc('host_delete_relationship', { p_secret: secret, p_id: id });
   if (error) throw error;
   return Boolean(data);
 }

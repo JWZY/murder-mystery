@@ -1,0 +1,238 @@
+/* Stage 1 — Roster. A quiet, read-first table + a read-only detail drawer.
+   Type stays inside the locked system: header cells use the eyebrow role,
+   everything else is body. No badges, no fills — just text and hairlines. */
+
+.empty {
+  margin-top: var(--space-6);
+  color: var(--color-text-muted);
+}
+
+/* ── Two-column layout: roster table (left) + shareable rollups (right) ──
+   Mirrors .inner's vertical rhythm but runs wider so the previously-empty
+   right gutter carries the rollup panel. Collapses to one column on tablet. */
+.layout {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 100px var(--space-5) 120px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--space-10);
+  align-items: start;
+}
+.main { min-width: 0; }
+
+/* ── Table ── */
+.table {
+  width: 100%;
+  margin-top: var(--space-6);
+  border-collapse: collapse;
+}
+
+.table th {
+  padding: 0 var(--space-3) var(--space-3);
+  text-align: left;
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--color-text);
+  opacity: 0.7;
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+.thLeft { padding-left: 0; }
+.thRight { padding-right: 0; }
+
+.table td {
+  padding: var(--space-3);
+  font-size: var(--text-body);
+  font-weight: var(--weight-body);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.row {
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+.row:hover { background: var(--color-surface-hover); }
+
+.nameCell { padding-left: 0; }
+.statusCell { padding-right: 0; }
+.name { font-weight: var(--weight-bold); }
+/* An asterisk flags entries that are new or edited since the host last read them.
+   They already float to the top; the mark is the whisper of colour that earns its keep. */
+.marker {
+  margin-left: 2px;
+  font-weight: var(--weight-bold);
+  color: color-mix(in oklch, var(--color-accent) 76%, var(--color-text));
+  cursor: default;
+}
+
+.dim { color: var(--color-text-muted); }
+
+/* RSVP is the one place a whisper of colour earns its keep. */
+.rsvpYes { color: var(--color-text); }
+.rsvpMaybe { color: var(--color-text-muted); }
+.rsvpNo { color: color-mix(in oklch, var(--color-accent) 70%, var(--color-text)); }
+
+/* ── Rollup panel ──
+   Each section reads like the About page's Premise/Where/When block: an eyebrow
+   label over plain name → value pairs. Hairline divider between sections, no
+   fills, so it stays legible enough to copy straight onto the guest page. */
+.aside {
+  display: flex;
+  flex-direction: column;
+}
+.rollup {
+  display: grid;
+  gap: var(--space-4);
+}
+.rollup + .rollup {
+  margin-top: var(--space-6);
+  padding-top: var(--space-6);
+  border-top: 1px solid var(--color-border);
+}
+.rollupHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.rollupLabel {
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  line-height: var(--leading-flush);
+  text-transform: uppercase;
+  color: var(--color-text);
+  opacity: 0.62;
+}
+.rollupCount {
+  font-size: var(--text-body-small);
+  color: var(--color-text-muted);
+}
+.rollupList {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+.rollupList div {
+  display: grid;
+  gap: var(--space-1);
+}
+.rollupName {
+  font-size: var(--text-body);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+.rollupValue {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+}
+.rollupEmpty {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+
+/* ── Detail drawer ── */
+.drawer {
+  position: fixed;
+  top: 64px;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  width: 360px;
+  max-width: calc(100vw - var(--space-4) * 2);
+  z-index: var(--z-controls);
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card-drag);
+  overflow: hidden;
+}
+
+.drawerHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+.close:hover { background: var(--color-surface-hover); }
+
+.drawerScroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.meta {
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
+
+.answers {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+}
+.answers div { display: flex; flex-direction: column; gap: 4px; }
+.answers dt { opacity: 0.76; }
+.answers dd { margin: 0; line-height: var(--leading-snug); }
+
+.hostNotes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Tablet: stack the rollup panel under the table; it gets a divider of its own. */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+  .aside {
+    padding-top: var(--space-7);
+    border-top: 1px solid var(--color-border);
+  }
+}
+
+@media (max-width: 640px) {
+  .layout { padding: 64px var(--space-5) 140px; }
+  .drawer { left: var(--space-4); width: auto; }
+}

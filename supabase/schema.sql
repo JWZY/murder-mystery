@@ -295,6 +295,19 @@ begin
 end;
 $$;
 
+-- ─── Anonymous potluck summary (NO token — read on the open intake form) ───
+-- Powers the "So far: …" hints under each dish on the intake step, so people can
+-- see what's already being brought before they pick. Returns ONLY the two dish
+-- columns — never names, contact, or any private answer — so it's safe to expose
+-- to anon without a token. rsvp='no' folks are excluded (they bring nothing).
+create or replace function get_potluck_summary()
+returns table (dish_category text, dish_detail text)
+language sql security definer set search_path = public as $$
+  select p.dish_category, p.dish_detail
+  from participants p
+  where p.rsvp <> 'no' and coalesce(p.dish_category, '') <> '';
+$$;
+
 -- ─── Read my assigned character (only once the host releases it) ───────────
 -- Returns the fiction the player is allowed to see for THEIR character only.
 -- The murderer flag and `secret` motive are deliberately excluded.
@@ -322,6 +335,7 @@ grant execute on function submit_intake(jsonb)               to anon;
 grant execute on function get_my_record(text)                to anon;
 grant execute on function update_my_record(text, jsonb)      to anon;
 grant execute on function get_roster(text)                   to anon;
+grant execute on function get_potluck_summary()              to anon;
 grant execute on function get_my_character(text)             to anon;
 
 -- app_new_token / touch_updated_at stay host-only (no anon grant).

@@ -1,40 +1,5 @@
+/* While dragging a connection from a card handle, the whole canvas reads as
+   "connect mode". */
 .connecting {
   cursor: crosshair;
-}
-
-.connectBanner {
-  position: fixed;
-  top: 72px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: var(--z-controls);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 10px 14px;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card-hover);
-  font-size: var(--text-body);
-  color: var(--color-text);
-}
-
-.connectBanner button {
-  font-family: var(--font-heading);
-  font-size: var(--text-body);
-  font-weight: var(--weight-bold);
-  letter-spacing: var(--tracking-heading);
-  text-transform: uppercase;
-  color: var(--color-text);
-  text-decoration: underline;
-  text-underline-offset: 4px;
-}
-
-.connectBanner kbd {
-  font-size: var(--text-body-small);
-  padding: 2px 6px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  color: var(--color-text);
 }

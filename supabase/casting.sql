@@ -157,6 +157,16 @@ begin
       to_char   = coalesce((payload->>'to_char')::uuid, to_char),
       label     = coalesce(payload->>'label', label)
     where id = rid;
+
+    -- update touched nothing → the supplied id is new; insert on it (the canvas
+    -- mints its own UUID, so a fresh edge arrives in the id branch). Skip when
+    -- from/to are absent (e.g. a label-only patch for an edge since deleted).
+    if not found and nullif(payload->>'from_char','') is not null
+                 and nullif(payload->>'to_char','') is not null then
+      insert into relationships (id, from_char, to_char, label)
+      values (rid, (payload->>'from_char')::uuid, (payload->>'to_char')::uuid,
+              coalesce(payload->>'label',''));
+    end if;
   else
     insert into relationships (from_char, to_char, label)
     values ((payload->>'from_char')::uuid, (payload->>'to_char')::uuid, coalesce(payload->>'label',''))

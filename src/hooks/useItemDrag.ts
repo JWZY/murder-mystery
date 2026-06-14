@@ -1,17 +1,15 @@
 import { useRef, useCallback } from 'react';
 import { useCanvasStore } from '../store/canvasStore';
 import { clientToCanvas } from '../utils/canvasCoords';
-import { computeSnap } from '../utils/snapGuides';
 
 const DRAG_THRESHOLD = 6;
 
 interface ItemDragOptions {
   itemId: string;
-  itemRef: React.RefObject<HTMLDivElement | null>;
   onTap: () => void;
 }
 
-export function useItemDrag({ itemId, itemRef, onTap }: ItemDragOptions) {
+export function useItemDrag({ itemId, onTap }: ItemDragOptions) {
   const store = useCanvasStore;
 
   const isDragging = useRef(false);
@@ -67,30 +65,15 @@ export function useItemDrag({ itemId, itemRef, onTap }: ItemDragOptions) {
       const item = state.characters[itemId];
       if (!item) return;
 
-      const viewport = state.viewport;
-      const canvasPos = clientToCanvas(e.clientX, e.clientY, viewport);
-      const rawX = canvasPos.x - offsetX.current;
-      const rawY = canvasPos.y - offsetY.current;
+      const canvasPos = clientToCanvas(e.clientX, e.clientY, state.viewport);
+      currentX.current = canvasPos.x - offsetX.current;
+      currentY.current = canvasPos.y - offsetY.current;
 
-      // Snap to nearby items
-      const snap = computeSnap(
-        rawX, rawY,
-        item.width, item.height,
-        itemId,
-        state.characters,
-        state.itemOrder,
-      );
-
-      currentX.current = snap.x;
-      currentY.current = snap.y;
-      state.setSnapGuides(snap.guides);
-
-      if (itemRef.current) {
-        itemRef.current.style.left = `${currentX.current}px`;
-        itemRef.current.style.top = `${currentY.current}px`;
-      }
+      // Drive position through the store (local only) so connected edges follow
+      // the card live; the persisted write happens once, on drop.
+      state.setPosition(itemId, currentX.current, currentY.current);
     },
-    [itemRef, itemId],
+    [itemId],
   );
 
   const onPointerUp = useCallback(() => {

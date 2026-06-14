@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { emptyRecord, type ParticipantRecord, type PublicSettings } from '../types/participant';
-import { submitIntake } from '../lib/api';
+import { getPotluckSummary, submitIntake } from '../lib/api';
 import { isConfigured } from '../lib/supabase';
-import { INTAKE_QUESTIONS, type DishOption, type Question } from '../lib/intakeSchema';
+import {
+  INTAKE_QUESTIONS,
+  needMorePotluck,
+  tallyPotluck,
+  type DishOption,
+  type PotluckTally,
+  type Question,
+} from '../lib/intakeSchema';
 import s from './participant.module.css';
 import ui from '../styles/ui.module.css';
 import Typewriter from './Typewriter';
@@ -485,36 +492,7 @@ function renderInput(q: Question, rec: ParticipantRecord, patch: (p: Partial<Par
   }
 
   if (q.kind === 'dishes' && q.dishOptions) {
-    const cats = String(rec.dish_category ?? '').split(',').filter(Boolean);
-    const details = parseDishDetail(String(rec.dish_detail ?? ''));
-    return (
-      <div className={s.tfChoices}>
-        {q.dishOptions.map((o) => {
-          const active = cats.includes(o.v);
-          return (
-            <DishRow
-              key={o.v}
-              option={o}
-              active={active}
-              value={details[o.v] ?? ''}
-              onToggle={() => {
-                const nextCats = active ? cats.filter((x) => x !== o.v) : [...cats, o.v];
-                const nextDetails = { ...details };
-                if (!active && nextDetails[o.v] == null) nextDetails[o.v] = '';
-                if (active) delete nextDetails[o.v];
-                patch({
-                  dish_category: nextCats.join(','),
-                  dish_detail: serializeDishDetail(nextDetails),
-                });
-              }}
-              onValueChange={(v) => {
-                patch({ dish_detail: serializeDishDetail({ ...details, [o.v]: v }) });
-              }}
-            />
-          );
-        })}
-      </div>
-    );
+    return <DishPicker options={q.dishOptions} rec={rec} patch={patch} />;
   }
 
   if (q.kind === 'scale' && q.caps) return (
@@ -540,10 +518,68 @@ function renderInput(q: Question, rec: ParticipantRecord, patch: (p: Partial<Par
   return null;
 }
 
-function DishRow({ option, active, value, onToggle, onValueChange }: {
+/**
+ * The dish step. Fetches the anonymous "what's already being brought" roll-up once
+ * on mount and threads each category's tally into its row. The fetch is tokenless
+ * and fails quiet: if it can't load, the tally stays empty and the picker behaves
+ * exactly as it did before (no badges, no hints).
+ */
+function DishPicker({ options, rec, patch }: {
+  options: DishOption[];
+  rec: ParticipantRecord;
+  patch: (p: Partial<ParticipantRecord>) => void;
+}) {
+  const [tally, setTally] = useState<Record<string, PotluckTally>>({});
+  useEffect(() => {
+    let alive = true;
+    getPotluckSummary()
+      .then((rows) => { if (alive) setTally(tallyPotluck(rows)); })
+      .catch(() => { /* no hints if the summary can't load */ });
+    return () => { alive = false; };
+  }, []);
+
+  const cats = String(rec.dish_category ?? '').split(',').filter(Boolean);
+  const details = parseDishDetail(String(rec.dish_detail ?? ''));
+  const needMore = needMorePotluck(tally);
+
+  return (
+    <div className={s.tfChoices}>
+      {options.map((o) => {
+        const active = cats.includes(o.v);
+        return (
+          <DishRow
+            key={o.v}
+            option={o}
+            active={active}
+            value={details[o.v] ?? ''}
+            tally={tally[o.v]}
+            needMore={needMore.has(o.v)}
+            onToggle={() => {
+              const nextCats = active ? cats.filter((x) => x !== o.v) : [...cats, o.v];
+              const nextDetails = { ...details };
+              if (!active && nextDetails[o.v] == null) nextDetails[o.v] = '';
+              if (active) delete nextDetails[o.v];
+              patch({
+                dish_category: nextCats.join(','),
+                dish_detail: serializeDishDetail(nextDetails),
+              });
+            }}
+            onValueChange={(v) => {
+              patch({ dish_detail: serializeDishDetail({ ...details, [o.v]: v }) });
+            }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function DishRow({ option, active, value, tally, needMore, onToggle, onValueChange }: {
   option: DishOption;
   active: boolean;
   value: string;
+  tally?: PotluckTally;
+  needMore: boolean;
   onToggle: () => void;
   onValueChange: (v: string) => void;
 }) {
@@ -553,6 +589,10 @@ function DishRow({ option, active, value, onToggle, onValueChange }: {
     if (active && !prevActive.current) inputRef.current?.focus();
     prevActive.current = active;
   }, [active]);
+
+  const collectsSpecifics = option.placeholder !== undefined;
+  const soFar = soFarText(tally, collectsSpecifics);
+
   return (
     <div className={`${s.tfChoice} ${active ? s.tfChoiceOn : ''} ${s.tfDishRow}`} onClick={(e) => {
       if ((e.target as HTMLElement).tagName === 'INPUT') return;
@@ -560,9 +600,11 @@ function DishRow({ option, active, value, onToggle, onValueChange }: {
     }}>
       <span className={`${s.tfCheck} ${active ? s.tfCheckOn : ''}`} />
       <span className={s.tfDishMain}>
-        <span className={s.tfDishLabel}>
-          {option.label}
+        <span className={s.tfDishLabelRow}>
+          <span className={s.tfDishLabel}>{option.label}</span>
+          {needMore && <span className={s.tfDishNeed}>[Need more]</span>}
         </span>
+        {soFar && <span className={s.tfDishSoFar}>{soFar}</span>}
         {active && option.placeholder !== undefined && (
           <input
             ref={inputRef}
@@ -576,6 +618,20 @@ function DishRow({ option, active, value, onToggle, onValueChange }: {
       </span>
     </div>
   );
+}
+
+/**
+ * "3 so far: wine, wine, etc" — the running count, then the named specifics with
+ * "etc" for any left blank. Categories that don't collect a specific ("Fill gaps")
+ * show the bare count ("1 so far"); a category with nobody yet shows nothing.
+ */
+function soFarText(tally: PotluckTally | undefined, collectsSpecifics: boolean): string {
+  const count = tally?.count ?? 0;
+  if (count === 0) return '';
+  if (!collectsSpecifics) return `${count} so far`;
+  const parts = [...(tally?.specifics ?? [])];
+  if (tally?.hasUnspecified) parts.push('etc');
+  return parts.length ? `${count} so far: ${parts.join(', ')}` : `${count} so far`;
 }
 
 function HouseRules({ rules, checked, onToggle, reveal, revealDelay = 0 }: {

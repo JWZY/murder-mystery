@@ -1,6 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ParticipantRecord } from '../types/participant';
-import { INTAKE_QUESTIONS, type DishOption, type Question } from '../lib/intakeSchema';
+import { getPotluckSummary } from '../lib/api';
+import {
+  INTAKE_QUESTIONS,
+  needMorePotluck,
+  tallyPotluck,
+  type DishOption,
+  type PotluckTally,
+  type Question,
+} from '../lib/intakeSchema';
 import AutoFitTextarea from './AutoFitTextarea';
 import s from './participant.module.css';
 
@@ -90,10 +98,12 @@ function Scale({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: 
   );
 }
 
-function DishRow({ option, active, value, onToggle, onValueChange }: {
+function DishRow({ option, active, value, tally, needMore, onToggle, onValueChange }: {
   option: DishOption;
   active: boolean;
   value: string;
+  tally?: PotluckTally;
+  needMore: boolean;
   onToggle: () => void;
   onValueChange: (v: string) => void;
 }) {
@@ -103,6 +113,10 @@ function DishRow({ option, active, value, onToggle, onValueChange }: {
     if (active && !prev.current) inputRef.current?.focus();
     prev.current = active;
   }, [active]);
+
+  const collectsSpecifics = option.placeholder !== undefined;
+  const soFar = soFarText(tally, collectsSpecifics);
+
   return (
     <label
       className={s.rfCheckRow}
@@ -116,7 +130,11 @@ function DishRow({ option, active, value, onToggle, onValueChange }: {
       <input type="checkbox" checked={active} readOnly />
       <span className={`${s.tfCheck} ${active ? s.tfCheckOn : ''}`} />
       <span className={s.rfDishMain}>
-        <span className={s.rfCheckLabel}>{option.label}</span>
+        <span className={s.tfDishLabelRow}>
+          <span className={s.rfCheckLabel}>{option.label}</span>
+          {needMore && <span className={s.tfDishNeed}>[Need more]</span>}
+        </span>
+        {soFar && <span className={s.tfDishSoFar}>{soFar}</span>}
         {active && option.placeholder !== undefined && (
           <input
             ref={inputRef}
@@ -133,9 +151,34 @@ function DishRow({ option, active, value, onToggle, onValueChange }: {
   );
 }
 
+/**
+ * "3 so far: wine, wine, etc" — the running count, then the named specifics with
+ * "etc" for any left blank. Categories that don't collect a specific ("Fill gaps")
+ * show the bare count ("1 so far"); a category with nobody yet shows nothing.
+ */
+function soFarText(tally: PotluckTally | undefined, collectsSpecifics: boolean): string {
+  const count = tally?.count ?? 0;
+  if (count === 0) return '';
+  if (!collectsSpecifics) return `${count} so far`;
+  const parts = [...(tally?.specifics ?? [])];
+  if (tally?.hasUnspecified) parts.push('etc');
+  return parts.length ? `${count} so far: ${parts.join(', ')}` : `${count} so far`;
+}
+
 function Dishes({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch: Patch }) {
+  // Same anonymous "what's coming" roll-up as the intake form; fails quiet.
+  const [tally, setTally] = useState<Record<string, PotluckTally>>({});
+  useEffect(() => {
+    let alive = true;
+    getPotluckSummary()
+      .then((rows) => { if (alive) setTally(tallyPotluck(rows)); })
+      .catch(() => { /* no hints if the summary can't load */ });
+    return () => { alive = false; };
+  }, []);
+
   const cats = (rec.dish_category ?? '').split(',').filter(Boolean);
   const details = parseDishDetail(rec.dish_detail);
+  const needMore = needMorePotluck(tally);
   return (
     <div className={s.rfChecks}>
       {(q.dishOptions ?? []).map((o) => {
@@ -153,6 +196,8 @@ function Dishes({ q, rec, patch }: { q: Question; rec: ParticipantRecord; patch:
             option={o}
             active={active}
             value={details[o.v] ?? ''}
+            tally={tally[o.v]}
+            needMore={needMore.has(o.v)}
             onToggle={toggle}
             onValueChange={(v) => patch({ dish_detail: serializeDishDetail({ ...details, [o.v]: v }) })}
           />

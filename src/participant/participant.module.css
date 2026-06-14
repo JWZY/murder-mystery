@@ -179,7 +179,23 @@
 
 .tfDishRow { align-items: flex-start; }
 .tfDishMain { display: flex; flex-direction: column; gap: 8px; flex: 1; min-width: 0; }
+.tfDishLabelRow { display: flex; align-items: baseline; gap: 8px; }
 .tfDishLabel { line-height: var(--leading-snug); }
+/* "[Need more]" — a nudge on whichever category is lagging behind. The ASCII
+   brackets are the badge; secondary (muted) colour, body weight, no chip. */
+.tfDishNeed {
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  font-weight: var(--weight-body);
+  line-height: var(--leading-flush);
+  color: var(--color-text-muted);
+}
+/* "3 so far: wine, wine, etc" — a quiet read of what's already claimed. */
+.tfDishSoFar {
+  font-size: var(--text-body-small);
+  line-height: var(--leading-snug);
+  color: var(--color-text-muted);
+}
 .tfDishInput {
   font: inherit;
   font-size: var(--text-body);

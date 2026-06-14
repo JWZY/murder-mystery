@@ -3,7 +3,7 @@ import { Users, Drama, Network, Settings as SettingsIcon } from 'lucide-react';
 import { useCanvasStore } from './store/canvasStore';
 import { useTheme } from './hooks/useTheme';
 import TabBar from './components/TabBar/TabBar';
-import GuestTab from './components/tabs/GuestTab';
+import RosterTab from './components/tabs/RosterTab';
 import PlanningTab from './components/tabs/PlanningTab';
 import CastingTab from './host/CastingTab';
 import SettingsTab from './host/SettingsTab';
@@ -52,10 +52,12 @@ function HostApp() {
   );
 }
 
+// Labels/order follow the 3-stage workflow: Track → Brainstorm → Cast → Settings.
+// The internal TabId literals stay as-is to avoid churning the persisted activeTab.
 const HOST_TABS = [
-  { id: 'guests' as const, label: 'Guests', Icon: Users },
-  { id: 'casting' as const, label: 'Casting', Icon: Drama },
+  { id: 'guests' as const, label: 'Roster', Icon: Users },
   { id: 'planning' as const, label: 'Canvas', Icon: Network },
+  { id: 'casting' as const, label: 'Casting', Icon: Drama },
   { id: 'settings' as const, label: 'Settings', Icon: SettingsIcon },
 ];
 
@@ -65,10 +67,10 @@ function HostShell() {
   return (
     <>
       <TabBar<TabId> tabs={HOST_TABS} activeId={activeTab} onChange={setActiveTab} showLabels />
+      {activeTab === 'guests' && <RosterTab />}
+      {activeTab === 'planning' && <PlanningTab />}
       {activeTab === 'casting' && <CastingTab />}
       {activeTab === 'settings' && <SettingsTab />}
-      {activeTab === 'planning' && <PlanningTab />}
-      {activeTab === 'guests' && <GuestTab />}
     </>
   );
 }

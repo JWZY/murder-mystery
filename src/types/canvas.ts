@@ -18,18 +18,27 @@ export interface BaseItem {
 
 // ─── Murder-mystery domain ────────────────────────────────────────────
 
-/** A character node on the relationship canvas. */
+/**
+ * A character node on the relationship canvas — a FigJam-style sticky note.
+ *
+ * Deliberately unstructured: a name and a free-text body you can write anything
+ * into, with the cast actor's name shown at the foot. The card grows to fit its
+ * content; arrows between cards are relationships. The formal character (title,
+ * acts, secret, props…) is shaped later in the Casting editor, backed by the
+ * same Supabase row.
+ */
 export interface CharacterItem extends BaseItem {
   type: 'character';
-  /** Role / archetype, e.g. "The Heiress", "The Butler". */
-  role: string;
-  /** Public-facing short bio (shown on the guest list). */
-  bio: string;
-  /** Private notes — motive, secret, the real story. Host eyes only. */
-  secret: string;
-  /** Accent color for the node + its edges. */
-  color: string;
-  /** Guest assigned to play this character, if any. */
+  /**
+   * Free-text body — concept, hook, whatever. Host-only scratchpad; maps to
+   * `characters.juice` (never sent to a player), NOT `title` (which is).
+   */
+  notes: string;
+  /** Name of the cast participant, shown at the card's foot. Read-only here. */
+  castName: string | null;
+  /** Cast participant's roleplay comfort (1–5), shown color-coded at the foot. Read-only here. */
+  castComfort: number | null;
+  /** Guest assigned to play this character, if any (participant id). */
   guestId: string | null;
 }
 
@@ -43,37 +52,6 @@ export interface Relationship {
   to: string; // character id
   /** Nature of the connection, e.g. "secretly in love", "owes money". */
   label: string;
-}
-
-/** A guest attending the party. */
-export interface Guest {
-  id: string;
-  name: string;
-  /** Potluck dish they're bringing. */
-  dish: string;
-  /** Character they've been cast as (character id), if assigned. */
-  characterId: string | null;
-  rsvp: 'yes' | 'maybe' | 'no' | 'invited';
-}
-
-export type IntakeFieldType = 'short-text' | 'long-text' | 'single-select' | 'multi-select';
-
-/** A question the host plans to ask guests in the intake form. */
-export interface IntakeQuestion {
-  id: string;
-  label: string;
-  type: IntakeFieldType;
-  /** Options for select-type questions. */
-  options: string[];
-  /** Why the host is asking — how it maps to casting/story. */
-  intent: string;
-}
-
-/** One act of the story structure. */
-export interface StoryAct {
-  id: string;
-  title: string;
-  notes: string;
 }
 
 export type TabId = 'guests' | 'casting' | 'planning' | 'settings';

@@ -2,11 +2,11 @@
 // from this list so phrasing never drifts:
 //   - IntakeForm (initial sign-up wizard)
 //   - RecordFields (post-signup edit page)
-//   - GuestTab Detail (host-side expanded row)
+//   - RosterTab detail drawer (host-side read-only entry)
 //
 // To add or rephrase a question: edit it here once.
 
-import type { ParticipantRecord } from '../types/participant';
+import type { ParticipantRecord, PotluckRow } from '../types/participant';
 
 export type QuestionKind = 'text' | 'area' | 'choice' | 'scale' | 'dishes';
 
@@ -151,6 +151,81 @@ export function formatDishContribution(rec: Pick<ParticipantRecord, 'dish_catego
       return d || label;
     })
     .join(' · ');
+}
+
+// ─── potluck roll-up (for the intake form's "what's coming" hints) ───────
+
+/** Per-category tally across everyone who's already submitted a dish. */
+export interface PotluckTally {
+  /** How many people are bringing something in this category. */
+  count: number;
+  /** The specifics they named, in submission order, repeats kept ("wine, wine"). */
+  specifics: string[];
+  /** True if at least one person checked the category but left the specifics blank → "etc". */
+  hasUnspecified: boolean;
+}
+
+function parseDetailMap(raw: string): Record<string, string> {
+  try {
+    const parsed = JSON.parse(raw || '{}');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return Object.fromEntries(
+        Object.entries(parsed as Record<string, unknown>)
+          .filter(([, v]) => typeof v === 'string')
+          .map(([k, v]) => [k.toLowerCase(), v as string]),
+      );
+    }
+  } catch {
+    /* legacy free-text detail — no per-category map to read */
+  }
+  return {};
+}
+
+/**
+ * Roll anonymous potluck rows up per dish category, keyed by the DishOption `v`.
+ * A checked category with no written specific contributes to `hasUnspecified`
+ * (rendered as "etc"), never an empty string — so "So far: wine, wine, etc" means
+ * two people named wine and one more is bringing a drink without saying what.
+ */
+export function tallyPotluck(rows: PotluckRow[]): Record<string, PotluckTally> {
+  const tally: Record<string, PotluckTally> = {};
+  for (const o of DISH_OPTIONS) tally[o.v] = { count: 0, specifics: [], hasUnspecified: false };
+  for (const row of rows) {
+    const cats = (row.dish_category ?? '')
+      .split(',')
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean);
+    const details = parseDetailMap(row.dish_detail);
+    for (const c of cats) {
+      const t = tally[c] ?? (tally[c] = { count: 0, specifics: [], hasUnspecified: false });
+      t.count += 1;
+      const d = (details[c] ?? '').trim();
+      if (d) t.specifics.push(d);
+      else t.hasUnspecified = true;
+    }
+  }
+  return tally;
+}
+
+/**
+ * Which dish categories are lagging and worth nudging toward — the set of
+ * DishOption `v`s tied for the lowest count among the real food categories.
+ * "Fill gaps" is excluded (it's a catch-all, not something to balance).
+ *
+ * The nudge only fires for a clear minority: when every category is level there's
+ * no laggard, and when 3+ categories tie for the lowest, flagging them all loses
+ * the signal. So we only return a set of 1 or 2 categories.
+ */
+export function needMorePotluck(tally: Record<string, PotluckTally>): Set<string> {
+  const cats = DISH_OPTIONS.filter((o) => o.placeholder !== undefined);
+  if (!cats.length) return new Set();
+  const counts = cats.map((o) => tally[o.v]?.count ?? 0);
+  const min = Math.min(...counts);
+  const max = Math.max(...counts);
+  if (max === min) return new Set();
+  const lowest = cats.filter((o) => (tally[o.v]?.count ?? 0) === min).map((o) => o.v);
+  if (lowest.length > 2) return new Set();
+  return new Set(lowest);
 }
 
 export function formatAnswer(q: Question, rec: ParticipantRecord): string {

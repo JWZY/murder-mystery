@@ -2,6 +2,7 @@ import { supabase, isConfigured } from './supabase';
 import type {
   ParticipantRecord,
   RosterEntry,
+  PotluckRow,
   MyCharacter,
   PublicSettings,
 } from '../types/participant';
@@ -55,6 +56,18 @@ export async function getRoster(token: string): Promise<RosterEntry[]> {
   const { data, error } = await supabase.rpc('get_roster', { p_token: token });
   if (error) throw error;
   return (data as RosterEntry[]) ?? [];
+}
+
+/**
+ * Anonymous roll-up of what's being brought, for the intake form's dish hints.
+ * No token: this is read during open sign-up, before a token exists. Returns only
+ * dish columns, never identity.
+ */
+export async function getPotluckSummary(): Promise<PotluckRow[]> {
+  guard();
+  const { data, error } = await supabase.rpc('get_potluck_summary');
+  if (error) throw error;
+  return (data as PotluckRow[]) ?? [];
 }
 
 export async function getMyCharacter(token: string): Promise<MyCharacter | null> {

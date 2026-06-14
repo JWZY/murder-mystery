@@ -1,13 +1,22 @@
+/* A character node — a FigJam-style sticky note. A name, a free-text body that
+   grows to fit, and the cast actor's name at the foot. The card has no fixed
+   height; it sizes to its content. Four edge handles appear on hover for
+   drawing connections. One token accent; no per-node colour. */
+
 .node {
   position: absolute;
-  display: flex;
   background: var(--color-surface);
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  overflow: hidden;
+  /* visible so the edge handles can sit just outside the card */
+  overflow: visible;
   cursor: grab;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.node:hover {
+  box-shadow: var(--shadow-card-hover);
 }
 
 .node:active {
@@ -15,29 +24,12 @@
 }
 
 .node.selected {
-  border-color: var(--node-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-color) 28%, transparent),
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 30%, transparent),
     var(--shadow-card-hover);
 }
 
-.node.connectSource {
-  border-color: var(--node-color);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--node-color) 50%, transparent);
-}
-
-.node.connectTarget {
-  border-style: dashed;
-  border-color: var(--color-accent);
-}
-
-.accent {
-  width: 6px;
-  flex-shrink: 0;
-  background: var(--node-color);
-}
-
 .body {
-  flex: 1;
   padding: var(--space-4);
   display: flex;
   flex-direction: column;
@@ -45,49 +37,147 @@
   min-width: 0;
 }
 
-.role {
-  font-family: var(--font-heading);
-  font-size: var(--text-body-small);
-  letter-spacing: var(--tracking-eyebrow);
-  text-transform: uppercase;
-  color: var(--node-color);
-  font-weight: var(--weight-bold);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.name {
+/* ── Name ── */
+.name,
+.nameInput {
   font-family: var(--font-heading);
   font-size: var(--text-heading);
   font-weight: var(--weight-body);
   letter-spacing: var(--tracking-heading);
-  text-transform: uppercase;
-  color: var(--color-text);
   line-height: var(--leading-tight);
+  color: var(--color-text);
+  overflow-wrap: anywhere;
 }
 
-.cast {
-  margin-top: auto;
+/* ── Free-text body ── */
+.notes,
+.notesInput {
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
+  color: var(--color-text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Editable fields (look identical to the static text) ── */
+.nameInput,
+.notesInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  padding: 0;
+  resize: none;
+  overflow: hidden;
+}
+.nameInput:focus,
+.notesInput:focus {
+  outline: none;
+}
+.nameInput::placeholder,
+.notesInput::placeholder {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* ── Foot: cast actor (left) + comfort / delete (right) ── */
+.foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.actor {
+  font-family: var(--font-body);
   font-size: var(--text-body-small);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
 }
 
-.castName {
+.footEnd {
+  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  color: var(--color-text);
+  gap: var(--space-2);
 }
 
-.dot {
-  width: 7px;
-  height: 7px;
+/* Cast player's roleplay comfort, e.g. "3/5". Colour carries the level
+   (see comfortColor): muted gray = low commitment → red = wants the lead. */
+.comfort {
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  line-height: var(--leading-flush);
+}
+
+.del {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+.del:hover {
+  color: var(--color-accent);
+}
+
+/* ── Edge connection handles ── */
+.handle {
+  position: absolute;
+  width: 11px;
+  height: 11px;
   border-radius: 50%;
-  background: #2e9e5b;
+  background: var(--color-accent);
+  border: 2px solid var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-border);
+  opacity: 0;
+  cursor: crosshair;
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+  z-index: 3;
 }
 
-.uncast {
-  color: var(--color-text);
-  opacity: 0.6;
-  font-style: italic;
+/* a larger invisible hit target around the visible dot */
+.handle::before {
+  content: '';
+  position: absolute;
+  inset: -7px;
+}
+
+.node:hover .handle,
+.node.selected .handle {
+  opacity: 1;
+}
+.handle:hover {
+  transform: scale(1.35);
+}
+
+.top {
+  top: -6px;
+  left: 50%;
+  margin-left: -5.5px;
+}
+.bottom {
+  bottom: -6px;
+  left: 50%;
+  margin-left: -5.5px;
+}
+.left {
+  left: -6px;
+  top: 50%;
+  margin-top: -5.5px;
+}
+.right {
+  right: -6px;
+  top: 50%;
+  margin-top: -5.5px;
 }

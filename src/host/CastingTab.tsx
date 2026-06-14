@@ -1,82 +1,49 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AgGridProvider, AgGridReact } from 'ag-grid-react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import {
-  AllCommunityModule,
-  type CellValueChangedEvent,
-  type ColDef,
-  type ICellRendererParams,
-  themeQuartz,
-} from 'ag-grid-community';
-import {
+  hostAssign,
   hostBootstrap,
-  hostSetFlags,
+  hostDeleteCharacter,
   hostSaveCharacter,
+  hostSetFlags,
+  type CharacterFull,
   type HostWorld,
   type ParticipantFull,
-  type CharacterFull,
   type TruthTag,
 } from '../lib/hostApi';
 import { useHost } from './hostContext';
-import { characterConcept, isGeneratedArchetype, seedCharacter } from './seedCharacter';
-import {
-  getIntakeReviewStatus,
-  initializeIntakeReviewStore,
-  markParticipantReviewed,
-} from '../lib/participantReview';
 import s from '../styles/ui.module.css';
-import grid from '../styles/agGrid.module.css';
 import styles from './CastingTab.module.css';
 
-type CharacterField = keyof Pick<
+/** Text fields the editor autosaves (string-valued). truth_tags is handled apart. */
+type TextField = keyof Pick<
   CharacterFull,
-  'name' | 'title' | 'background' | 'act1' | 'act2' | 'act3' | 'props' | 'recommended_meets' | 'secret'
+  'name' | 'title' | 'background' | 'act1' | 'act2' | 'act3' | 'action' | 'props' | 'recommended_meets' | 'secret'
 >;
 
-type CastingRow = {
-  participant: ParticipantFull;
-  character: CharacterFull | null;
-  guest: string;
-  comfort: string;
-  submittedConcept: string;
-  name: string;
-  title: string;
-  background: string;
-  act1: string;
-  act2: string;
-  act3: string;
-  props: string;
-  recommended_meets: string;
-  truth_tags_text: string;
-  secret: string;
-  is_murderer: boolean;
-  release: string;
-  link: string;
-};
+type ReleaseStage = 'private' | 'consent' | 'full';
 
-const ensuringCardsBySecret = new Map<string, Promise<void>>();
-
-const agTheme = themeQuartz.withParams({
-  backgroundColor: 'rgba(0, 0, 0, 0.78)',
-  foregroundColor: '#f4eee4',
-  headerBackgroundColor: 'rgba(0, 0, 0, 0.94)',
-  headerTextColor: '#f4eee4',
-  oddRowBackgroundColor: 'rgba(255, 255, 255, 0.025)',
-  rowHoverColor: 'rgba(255, 255, 255, 0.07)',
-  borderColor: 'rgba(244, 238, 228, 0.22)',
-  accentColor: '#c0392b',
-  fontFamily: 'inherit',
-  fontSize: 12,
-  headerHeight: 38,
-});
-
+/**
+ * Stage 3 — Cast. One character edited at a time. The left rail lists every
+ * character (with who's cast + how far it's been revealed); the right pane is a
+ * plain form that autosaves changed keys back to Supabase.
+ *
+ * Two-phase reveal: "Send background" lets a friend consent to the concept;
+ * "Release full character" hands them the acts and their secret action. Nothing
+ * is auto-generated here — characters are born on the Canvas or via "Add
+ * character", never seeded behind your back.
+ */
 export default function CastingTab() {
   const { secret } = useHost();
   const [world, setWorld] = useState<HostWorld | null>(null);
   const [error, setError] = useState('');
-  const [ensuringCards, setEnsuringCards] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [releaseReviewId, setReleaseReviewId] = useState<string | null>(null);
-  const [, setReviewTick] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  // Per-character debounced write-back. We accumulate changed keys and flush the
+  // whole patch ~1s after the last edit — coalesce semantics on the RPC mean a
+  // partial patch never clobbers sibling fields.
+  const pending = useRef(new Map<string, Partial<CharacterFull>>());
+  const timers = useRef(new Map<string, number>());
 
   async function reload() {
     try {
@@ -85,7 +52,7 @@ export default function CastingTab() {
       const msg = (e as { message?: string })?.message ?? '';
       setError(
         /host_bootstrap|does not exist|schema cache/i.test(msg)
-          ? 'Casting backend not installed yet — run supabase/casting.sql in the Supabase SQL Editor, then reload.'
+          ? 'Casting backend not installed — run supabase/casting.sql then casting-phase2.sql, and reload.'
           : 'Could not load casting data.',
       );
     }
@@ -96,336 +63,404 @@ export default function CastingTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [secret]);
 
+  // Flush everything still pending on unmount so no edit is lost on tab change.
   useEffect(() => {
-    if (!world) return;
-    initializeIntakeReviewStore(world.participants);
-    setReviewTick((tick) => tick + 1);
-  }, [world]);
-
-  useEffect(() => {
-    if (!world) return;
-    const characterIds = new Set(world.characters.map((character) => character.id));
-    const missing = world.participants.filter((participant) => (
-      !participant.character_id || !characterIds.has(participant.character_id)
-    ));
-    if (!missing.length) return;
-
-    let cancelled = false;
-    let job = ensuringCardsBySecret.get(secret);
-    if (!job) {
-      job = (async () => {
-        for (const participant of missing) {
-          const seed = seedCharacter(participant, world.participants.indexOf(participant));
-          await hostSaveCharacter(secret, { ...seed, participant_id: participant.id });
-          markParticipantReviewed(participant);
-        }
-      })().finally(() => {
-        ensuringCardsBySecret.delete(secret);
-      });
-      ensuringCardsBySecret.set(secret, job);
-    }
-
-    setEnsuringCards(true);
-    job
-      .then(async () => {
-        if (!cancelled) await reload();
-      })
-      .catch((e) => {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : 'Could not prepare character rows.');
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setEnsuringCards(false);
-        }
-      });
-
+    const timersMap = timers.current;
     return () => {
-      cancelled = true;
+      for (const id of pending.current.keys()) void flush(id);
+      for (const t of timersMap.values()) window.clearTimeout(t);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [world, secret]);
-  const rows = useMemo(() => {
-    if (!world) return [];
-    const byId = (id: string | null) => world.characters.find((x) => x.id === id) ?? null;
-    return world.participants.map((participant): CastingRow => {
-      const character = byId(participant.character_id);
-      const title = character?.title && isGeneratedArchetype(character.title)
-        ? characterConcept(participant)
-        : character?.title ?? '';
-      const reviewStatus = getIntakeReviewStatus(participant);
-      const guest = [
-        displayName(participant),
-        reviewStatus ? `- ${formatReviewLabel(reviewStatus.label)}` : null,
-      ].filter(Boolean).join(' ');
-      const link = `${window.location.origin}${import.meta.env.BASE_URL}?p=${participant.token}`;
-      return {
-        participant,
-        character,
-        guest,
-        comfort: participant.roleplay_comfort == null ? '-' : `${participant.roleplay_comfort}/5`,
-        submittedConcept: characterConcept(participant),
-        name: character?.name ?? '',
-        title,
-        background: character?.background ?? '',
-        act1: character?.act1 ?? '',
-        act2: character?.act2 ?? '',
-        act3: character?.act3 ?? '',
-        props: character?.props ?? '',
-        recommended_meets: character?.recommended_meets ?? '',
-        truth_tags_text: character ? truthTagsToText(character.truth_tags) : '',
-        secret: character?.secret ?? '',
-        is_murderer: participant.is_murderer,
-        release: character?.released ? 'Released' : 'Private',
-        link,
-      };
-    });
-  }, [world]);
+  }, []);
 
-  if (error) return <Shell><p className={s.body}>{error}</p></Shell>;
-  if (!world) return <Shell><p className={`${s.body} ${s.muted}`}>Loading...</p></Shell>;
-
-  const participants = world.participants;
-  const released = world.characters.filter((character) => character.released).length;
-  const killers = participants.filter((p) => p.is_murderer).length;
-
-  async function saveField(row: CastingRow, field: CharacterField, raw: unknown) {
-    if (!row.character) return;
-    const value = String(raw ?? '');
-    const nextValue = field === 'title' && isGeneratedArchetype(value) ? characterConcept(row.participant) : value;
-    if (String(row.character[field] ?? '') === nextValue) return;
-    setBusyId(row.participant.id);
+  async function flush(id: string) {
+    const patch = pending.current.get(id);
+    pending.current.delete(id);
+    const t = timers.current.get(id);
+    if (t) { window.clearTimeout(t); timers.current.delete(id); }
+    if (!patch || Object.keys(patch).length === 0) return;
     try {
-      await hostSaveCharacter(secret, { id: row.character.id, [field]: nextValue });
-      setWorld((prev) => prev ? updateCharacterInWorld(prev, row.character!.id, { [field]: nextValue }) : prev);
-    } finally {
-      setBusyId(null);
+      await hostSaveCharacter(secret, { id, ...patch });
+    } catch {
+      // re-queue the patch (without overwriting newer edits) and surface it
+      pending.current.set(id, { ...patch, ...(pending.current.get(id) ?? {}) });
+      setError('A change failed to save — it will retry on your next edit.');
     }
   }
 
-  async function saveTruthTags(row: CastingRow, raw: unknown) {
-    if (!row.character) return;
-    const next = parseTruthTags(String(raw ?? ''));
-    if (truthTagsToText(row.character.truth_tags) === truthTagsToText(next)) return;
-    setBusyId(row.character.id);
+  function queueSave(id: string, patch: Partial<CharacterFull>) {
+    pending.current.set(id, { ...(pending.current.get(id) ?? {}), ...patch });
+    const t = timers.current.get(id);
+    if (t) window.clearTimeout(t);
+    timers.current.set(id, window.setTimeout(() => void flush(id), 1000));
+  }
+
+  function patchCharacter(id: string, patch: Partial<CharacterFull>) {
+    setWorld((prev) => (prev ? mergeCharacter(prev, id, patch) : prev));
+    queueSave(id, patch);
+  }
+
+  async function saveNow(id: string, patch: Partial<CharacterFull>) {
+    setWorld((prev) => (prev ? mergeCharacter(prev, id, patch) : prev));
+    await flush(id); // flush any queued edits first
     try {
-      await hostSaveCharacter(secret, { id: row.character.id, truth_tags: next });
-      setWorld((prev) => prev ? updateCharacterInWorld(prev, row.character!.id, { truth_tags: next }) : prev);
-    } finally {
-      setBusyId(null);
+      await hostSaveCharacter(secret, { id, ...patch });
+    } catch {
+      setError('Could not save that change.');
+      await reload();
     }
   }
 
-  async function toggleMurderer(row: CastingRow) {
-    setBusyId(row.participant.id);
+  async function onAdd() {
+    const id = crypto.randomUUID();
+    const blank = blankCharacter(id);
+    setWorld((prev) => (prev ? { ...prev, characters: [...prev.characters, blank] } : prev));
+    setSelectedId(id);
     try {
-      await hostSetFlags(secret, row.participant.id, { is_murderer: !row.participant.is_murderer });
-      setWorld((prev) =>
-        prev
-          ? {
-              ...prev,
-              participants: prev.participants.map((item) =>
-                item.id === row.participant.id ? { ...item, is_murderer: !item.is_murderer } : item,
-              ),
-            }
-          : prev,
-      );
-    } finally {
-      setBusyId(null);
+      await hostSaveCharacter(secret, { id, name: blank.name });
+    } catch {
+      setError('Could not create the character.');
+      await reload();
     }
   }
 
-  async function setReleased(row: CastingRow, released: boolean) {
-    if (!row.character) return;
-    setBusyId(row.character.id);
+  async function onDelete(char: CharacterFull) {
+    if (!confirm(`Delete "${char.name || 'this character'}" permanently?`)) return;
+    pending.current.delete(char.id);
+    setWorld((prev) =>
+      prev ? { ...prev, characters: prev.characters.filter((c) => c.id !== char.id) } : prev,
+    );
+    if (selectedId === char.id) setSelectedId(null);
     try {
-      await hostSaveCharacter(secret, { id: row.character.id, released });
-      setWorld((prev) => prev ? updateCharacterInWorld(prev, row.character!.id, { released }) : prev);
-      if (released) setReleaseReviewId(null);
-    } finally {
-      setBusyId(null);
+      await hostDeleteCharacter(secret, char.id);
+    } catch {
+      setError('Could not delete the character.');
+      await reload();
     }
   }
 
-  const columnDefs: ColDef<CastingRow>[] = [
-    {
-      headerName: 'Guest',
-      field: 'guest',
-      pinned: 'left',
-      width: 190,
-      editable: false,
-      cellClass: 'mm-strong-cell',
-      cellRenderer: (params: ICellRendererParams<CastingRow>) => (
-        <div className={styles.guestCell}>
-          <span>{params.value}</span>
-        </div>
-      ),
-    },
-    { headerName: 'Comfort', field: 'comfort', width: 110, editable: false },
-    { headerName: 'Submitted concept', field: 'submittedConcept', width: 240, editable: false, cellClass: 'mm-wrap-cell' },
-    { headerName: 'Persona name', field: 'name', width: 180, editable: hasCharacter },
-    { headerName: 'Title / concept', field: 'title', width: 220, editable: hasCharacter },
-    largeTextColumn('Background', 'background', 300),
-    largeTextColumn('Act I', 'act1', 300),
-    largeTextColumn('Act II', 'act2', 300),
-    largeTextColumn('Act III', 'act3', 300),
-    largeTextColumn('Props', 'props', 220),
-    largeTextColumn('People', 'recommended_meets', 220),
-    largeTextColumn('Truth tags', 'truth_tags_text', 260),
-    largeTextColumn('Secret', 'secret', 300),
-    {
-      headerName: 'Murderer',
-      field: 'is_murderer',
-      width: 120,
-      editable: false,
-      cellRenderer: (params: ICellRendererParams<CastingRow>) => (
-        <label className={styles.checkLabel}>
-          <input
-            type="checkbox"
-            checked={Boolean(params.data?.is_murderer)}
-            disabled={!params.data || busyId === params.data.participant.id}
-            onChange={() => params.data && toggleMurderer(params.data)}
-          />
-          <span>{params.data?.is_murderer ? 'Yes' : 'No'}</span>
-        </label>
-      ),
-    },
-    {
-      headerName: 'Release',
-      field: 'release',
-      width: 150,
-      editable: false,
-      cellRenderer: (params: ICellRendererParams<CastingRow>) => {
-        const row = params.data;
-        if (!row?.character) return <span className={styles.quiet}>Preparing</span>;
-        const reviewing = releaseReviewId === row.character.id;
-        if (row.character.released) {
-          return (
-            <div className={styles.releaseCell}>
-              <span className={`${styles.status} ${styles.statusLive}`}>Released</span>
-              <button className={styles.smallButton} disabled={busyId === row.character.id} onClick={() => setReleased(row, false)}>
-                Hide
-              </button>
-            </div>
-          );
-        }
-        if (reviewing) {
-          return (
-            <div className={styles.releaseCell}>
-              <span>Visible immediately.</span>
-              <button className={styles.smallButton} disabled={busyId === row.character.id} onClick={() => setReleased(row, true)}>
-                Confirm
-              </button>
-              <button className={styles.smallButton} onClick={() => setReleaseReviewId(null)}>Cancel</button>
-            </div>
-          );
-        }
-        return (
-          <div className={styles.releaseCell}>
-            <span className={`${styles.status} ${styles.statusPrivate}`}>Private</span>
-            <button className={styles.smallButton} disabled={busyId === row.character.id} onClick={() => setReleaseReviewId(row.character!.id)}>
-              Review
-            </button>
-          </div>
-        );
-      },
-    },
-    {
-      headerName: 'Link',
-      field: 'link',
-      width: 110,
-      editable: false,
-      cellRenderer: (params: ICellRendererParams<CastingRow>) => (
-        <button className={styles.smallButton} onClick={() => params.value && navigator.clipboard?.writeText(String(params.value))}>
-          Copy
-        </button>
-      ),
-    },
-  ];
-
-  async function onCellValueChanged(event: CellValueChangedEvent<CastingRow>) {
-    const row = event.data;
-    if (!row || event.newValue === event.oldValue) return;
-    const field = event.colDef.field;
-    if (isCharacterField(field)) await saveField(row, field, event.newValue);
-    else if (field === 'truth_tags_text') await saveTruthTags(row, event.newValue);
+  async function onCast(char: CharacterFull, participantId: string | null) {
+    const current = world?.participants.find((p) => p.character_id === char.id) ?? null;
+    setWorld((prev) => (prev ? recast(prev, char.id, participantId) : prev));
+    try {
+      if (current && current.id !== participantId) await hostAssign(secret, current.id, null);
+      if (participantId) await hostAssign(secret, participantId, char.id);
+    } catch {
+      setError('Could not update casting.');
+      await reload();
+    }
   }
+
+  async function onToggleMurderer(participant: ParticipantFull) {
+    const next = !participant.is_murderer;
+    setWorld((prev) =>
+      prev
+        ? {
+            ...prev,
+            participants: prev.participants.map((p) =>
+              p.id === participant.id ? { ...p, is_murderer: next } : p,
+            ),
+          }
+        : prev,
+    );
+    try {
+      await hostSetFlags(secret, participant.id, { is_murderer: next });
+    } catch {
+      setError('Could not update the murderer flag.');
+      await reload();
+    }
+  }
+
+  const selected = useMemo(
+    () => (world && selectedId ? world.characters.find((c) => c.id === selectedId) ?? null : null),
+    [world, selectedId],
+  );
+
+  if (error && !world) return <Shell><p className={s.body}>{error}</p></Shell>;
+  if (!world) return <Shell><p className={s.body}>Loading…</p></Shell>;
+
+  const characters = [...world.characters].sort(byCreated);
+  const released = world.characters.filter((c) => c.released).length;
+  const castParticipant = selected
+    ? world.participants.find((p) => p.character_id === selected.id) ?? null
+    : null;
 
   return (
     <Shell>
-      <h1 className={s.title}>Casting</h1>
-      <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-2)' }}>
-        Build and release each player's card directly in the grid. Double-click a cell to edit.
-      </p>
-      <p className={`${s.body} ${s.muted}`} style={{ marginTop: 'var(--space-2)' }}>
-        {world.participants.length} players · {released} released · {killers} murderer{killers === 1 ? '' : 's'} flagged
-      </p>
-      {ensuringCards && <p className={`${s.body} ${styles.syncNote}`}>Preparing private character rows...</p>}
+      <div className={s.titleRow}>
+        <div>
+          <h1 className={s.title}>Casting</h1>
+          <p className={s.intro}>
+            {characters.length} character{characters.length === 1 ? '' : 's'} · {released} released
+          </p>
+        </div>
+        <button className={s.btn} onClick={onAdd}>Add character</button>
+      </div>
 
-      <div className={`${grid.gridShell} ${styles.gridHeight}`}>
-        <AgGridProvider modules={[AllCommunityModule]}>
-          <AgGridReact<CastingRow>
-            theme={agTheme}
-            rowData={rows}
-            columnDefs={columnDefs}
-            domLayout="autoHeight"
-            defaultColDef={{
-              sortable: true,
-              filter: true,
-              resizable: true,
-              wrapText: true,
-              autoHeight: true,
-            }}
-            getRowId={(params) => params.data.participant.id}
-            singleClickEdit={false}
-            stopEditingWhenCellsLoseFocus
-            onCellValueChanged={onCellValueChanged}
+      {error && <p className={`${s.notice} ${styles.errorNote}`}>{error}</p>}
+
+      <div className={styles.layout}>
+        <nav className={styles.list} aria-label="Characters">
+          {characters.length === 0 && (
+            <p className={`${s.body} ${styles.listEmpty}`}>
+              No characters yet. Add one here, or sketch them on the Canvas.
+            </p>
+          )}
+          {characters.map((c) => {
+            const cast = world.participants.find((p) => p.character_id === c.id);
+            return (
+              <button
+                key={c.id}
+                className={`${styles.listItem} ${c.id === selectedId ? styles.listItemOn : ''}`}
+                onClick={() => setSelectedId(c.id)}
+              >
+                <span className={styles.listName}>{c.name || 'Untitled character'}</span>
+                <span className={styles.listMeta}>
+                  {c.title || 'no archetype'}{cast ? ` · ${displayName(cast)}` : ''}
+                </span>
+                <StageBadge stage={stageOf(c)} />
+              </button>
+            );
+          })}
+        </nav>
+
+        {selected ? (
+          <Editor
+            key={selected.id}
+            char={selected}
+            participants={world.participants}
+            castParticipant={castParticipant}
+            onEditText={(field, value) => patchCharacter(selected.id, { [field]: value })}
+            onEditTruthTags={(tags) => patchCharacter(selected.id, { truth_tags: tags })}
+            onCast={(pid) => onCast(selected, pid)}
+            onToggleMurderer={onToggleMurderer}
+            onSetRelease={(patch) => saveNow(selected.id, patch)}
+            onDelete={() => onDelete(selected)}
           />
-        </AgGridProvider>
+        ) : (
+          <div className={styles.editorEmpty}>
+            <p className={`${s.body} ${styles.dim}`}>Select a character to edit, or add one.</p>
+          </div>
+        )}
       </div>
     </Shell>
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+// ── Editor ─────────────────────────────────────────────────────────────────
+
+function Editor({
+  char,
+  participants,
+  castParticipant,
+  onEditText,
+  onEditTruthTags,
+  onCast,
+  onToggleMurderer,
+  onSetRelease,
+  onDelete,
+}: {
+  char: CharacterFull;
+  participants: ParticipantFull[];
+  castParticipant: ParticipantFull | null;
+  onEditText: (field: TextField, value: string) => void;
+  onEditTruthTags: (tags: TruthTag[]) => void;
+  onCast: (participantId: string | null) => void;
+  onToggleMurderer: (participant: ParticipantFull) => void;
+  onSetRelease: (patch: Partial<CharacterFull>) => void;
+  onDelete: () => void;
+}) {
+  // truth_tags round-trips through text lossily (parse → stringify), so the
+  // textarea keeps its own draft seeded once per character.
+  const [truthDraft, setTruthDraft] = useState(() => truthTagsToText(char.truth_tags));
+  const [confirm, setConfirm] = useState<null | { label: string; patch: Partial<CharacterFull> }>(null);
+  const stage = stageOf(char);
+
   return (
-    <div className={`${s.page} ${styles.pageScroll}`}>
-      <div className={`${s.inner} ${styles.inner}`}>{children}</div>
+    <div className={styles.editor}>
+      <Field label="Persona name">
+        <input className={s.input} value={char.name} onChange={(e) => onEditText('name', e.target.value)} placeholder="e.g. Vivian Cross" />
+      </Field>
+      <Field label="Title / archetype">
+        <input className={s.input} value={char.title} onChange={(e) => onEditText('title', e.target.value)} placeholder="The Heiress, The Mechanic…" />
+      </Field>
+
+      <Field label="Cast as">
+        <select
+          className={s.select}
+          value={castParticipant?.id ?? ''}
+          onChange={(e) => onCast(e.target.value || null)}
+        >
+          <option value="">— not cast —</option>
+          {participants.map((p) => {
+            const elsewhere = p.character_id && p.character_id !== char.id;
+            return (
+              <option key={p.id} value={p.id}>
+                {displayName(p)}{elsewhere ? ' · cast elsewhere' : ''}
+              </option>
+            );
+          })}
+        </select>
+      </Field>
+
+      {castParticipant && (
+        <label className={styles.checkRow}>
+          <input
+            type="checkbox"
+            checked={castParticipant.is_murderer}
+            onChange={() => onToggleMurderer(castParticipant)}
+          />
+          <span className={s.body}>This player is the murderer</span>
+        </label>
+      )}
+
+      <Field label="Background">
+        <textarea className={s.area} rows={3} value={char.background} onChange={(e) => onEditText('background', e.target.value)} placeholder="Who they are. Shared at the consent stage." />
+      </Field>
+
+      <Field label="Act I"><textarea className={s.area} rows={3} value={char.act1} onChange={(e) => onEditText('act1', e.target.value)} /></Field>
+      <Field label="Act II"><textarea className={s.area} rows={3} value={char.act2} onChange={(e) => onEditText('act2', e.target.value)} /></Field>
+      <Field label="Act III"><textarea className={s.area} rows={3} value={char.act3} onChange={(e) => onEditText('act3', e.target.value)} /></Field>
+
+      <Field label="Secret action" hint="Handed to the player at full release — what they do that shapes the crime.">
+        <textarea className={s.area} rows={3} value={char.action} onChange={(e) => onEditText('action', e.target.value)} />
+      </Field>
+
+      <Field label="Props / what to bring"><textarea className={s.area} rows={2} value={char.props} onChange={(e) => onEditText('props', e.target.value)} /></Field>
+      <Field label="People to seek out"><textarea className={s.area} rows={2} value={char.recommended_meets} onChange={(e) => onEditText('recommended_meets', e.target.value)} /></Field>
+
+      <Field label="Secret / motive" hint="Host eyes only — never sent to the player.">
+        <textarea
+          className={`${s.area} ${styles.secretArea}`}
+          rows={3}
+          value={char.secret}
+          onChange={(e) => onEditText('secret', e.target.value)}
+          placeholder="The real story behind this character."
+        />
+      </Field>
+
+      <Field label="Truth tags" hint="One per line, as “beat: truth”. Real details woven into the fiction.">
+        <textarea
+          className={s.area}
+          rows={3}
+          value={truthDraft}
+          onChange={(e) => { setTruthDraft(e.target.value); onEditTruthTags(parseTruthTags(e.target.value)); }}
+          placeholder={'allergy: she really is allergic to perfume\njob: actually fixes cars'}
+        />
+      </Field>
+
+      <div className={styles.release}>
+        <div className={styles.releaseHead}>
+          <span className={s.eyebrow}>Reveal</span>
+          <StageBadge stage={stage} />
+        </div>
+
+        {confirm ? (
+          <div className={styles.confirmRow}>
+            <span className={s.body}>{confirm.label}</span>
+            <button className={s.btn} onClick={() => { onSetRelease(confirm.patch); setConfirm(null); }}>Confirm</button>
+            <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm(null)}>Cancel</button>
+          </div>
+        ) : (
+          <div className={s.actions}>
+            {stage === 'private' && (
+              <>
+                <button className={s.btn} onClick={() => setConfirm({ label: 'Send the background for the player to consent to?', patch: { background_released: true } })}>
+                  Send background
+                </button>
+                <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm({ label: 'Release the full character now?', patch: { released: true } })}>
+                  Release full
+                </button>
+              </>
+            )}
+            {stage === 'consent' && (
+              <>
+                <button className={s.btn} onClick={() => setConfirm({ label: 'Release the full character — acts, props, and their secret action?', patch: { released: true } })}>
+                  Release full
+                </button>
+                <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm({ label: 'Take the background back to private?', patch: { background_released: false } })}>
+                  Unsend
+                </button>
+              </>
+            )}
+            {stage === 'full' && (
+              <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm({ label: 'Pull the full character back to background-only?', patch: { released: false } })}>
+                Unrelease
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <button className={styles.deleteBtn} onClick={onDelete}>
+        <Trash2 size={16} /> Delete character
+      </button>
     </div>
   );
 }
 
-function largeTextColumn(headerName: string, field: keyof CastingRow, width: number): ColDef<CastingRow> {
-  return {
-    headerName,
-    field,
-    width,
-    editable: hasCharacter,
-    cellClass: 'mm-wrap-cell',
-    cellEditor: 'agLargeTextCellEditor',
-    cellEditorPopup: true,
-    cellEditorParams: { rows: 8, cols: 48 },
-  };
+function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <label className={s.field}>
+      <span className={s.label}>{label}</span>
+      {hint && <span className={styles.hint}>{hint}</span>}
+      {children}
+    </label>
+  );
 }
 
-function hasCharacter(params: { data?: CastingRow | null }): boolean {
-  return Boolean(params.data?.character);
+function StageBadge({ stage }: { stage: ReleaseStage }) {
+  const label = stage === 'full' ? 'Released' : stage === 'consent' ? 'Background sent' : 'Private';
+  const cls = stage === 'full' ? styles.badgeFull : stage === 'consent' ? styles.badgeConsent : styles.badgePrivate;
+  return <span className={`${styles.badge} ${cls}`}>{label}</span>;
 }
 
-function isCharacterField(field: string | undefined): field is CharacterField {
-  return Boolean(field && ['name', 'title', 'background', 'act1', 'act2', 'act3', 'props', 'recommended_meets', 'secret'].includes(field));
+function Shell({ children }: { children: ReactNode }) {
+  return (
+    <div className={s.page}>
+      <div className={`${s.inner} ${styles.shell}`}>{children}</div>
+    </div>
+  );
 }
 
-function formatReviewLabel(label: string): string {
-  return label.replace(/^Guest /, '').replace(/^New submission/, 'new submission').replace(/^modified/, 'edited');
+// ── helpers ──────────────────────────────────────────────────────────────
+
+function stageOf(c: CharacterFull): ReleaseStage {
+  if (c.released) return 'full';
+  if (c.background_released) return 'consent';
+  return 'private';
 }
 
-function updateCharacterInWorld(world: HostWorld, id: string, patch: Partial<CharacterFull>): HostWorld {
+function mergeCharacter(world: HostWorld, id: string, patch: Partial<CharacterFull>): HostWorld {
   return {
     ...world,
-    characters: world.characters.map((char) => (char.id === id ? { ...char, ...patch } : char)),
+    characters: world.characters.map((c) => (c.id === id ? { ...c, ...patch } : c)),
   };
+}
+
+function recast(world: HostWorld, characterId: string, participantId: string | null): HostWorld {
+  return {
+    ...world,
+    participants: world.participants.map((p) => {
+      if (p.id === participantId) return { ...p, character_id: characterId };
+      // clear anyone previously cast as this character (single occupant)
+      if (p.character_id === characterId && p.id !== participantId) return { ...p, character_id: null };
+      return p;
+    }),
+  };
+}
+
+function blankCharacter(id: string): CharacterFull {
+  return {
+    id, name: 'New character', title: '', background: '',
+    act1: '', act2: '', act3: '', action: '', secret: '',
+    props: '', recommended_meets: '', truth_tags: [], juice: '',
+    color: '#c0392b', released: false, background_released: false, x: 0, y: 0,
+  };
+}
+
+function byCreated(a: CharacterFull, b: CharacterFull): number {
+  return (a.created_at ?? '').localeCompare(b.created_at ?? '');
 }
 
 function displayName(p: ParticipantFull): string {
@@ -447,9 +482,6 @@ function parseTruthTags(value: string): TruthTag[] {
     .map((line) => {
       const index = line.indexOf(':');
       if (index === -1) return { truth: line };
-      return {
-        beat: line.slice(0, index).trim(),
-        truth: line.slice(index + 1).trim(),
-      };
+      return { beat: line.slice(0, index).trim(), truth: line.slice(index + 1).trim() };
     });
 }

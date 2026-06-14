@@ -8,14 +8,49 @@
 }
 
 .edge {
+  fill: none;
+  stroke: var(--color-accent);
   stroke-width: 2;
-  opacity: 0.4;
+  stroke-linecap: round;
+  opacity: 0.6;
   transition: opacity var(--transition-fast), stroke-width var(--transition-fast);
 }
 
 .edgeActive {
-  opacity: 0.95;
-  stroke-width: 3;
+  opacity: 1;
+  stroke-width: 2.5;
+}
+
+/* The selected edge — emphasised, since it's the one Delete/Backspace removes. */
+.edgeSelected {
+  opacity: 1;
+  stroke-width: 3.5;
+}
+
+/* A fat, invisible click target laid over each thin arrow. The SVG itself is
+   pointer-events:none; re-enabling it just on the stroke makes the arrow
+   clickable without blocking the cards behind it. */
+.hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 18;
+  stroke-linecap: round;
+  pointer-events: stroke;
+  cursor: pointer;
+}
+
+/* The live connector that trails the cursor while drawing a connection. */
+.ghost {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 6 5;
+  opacity: 0.85;
+}
+
+.arrowHead {
+  fill: var(--color-accent);
 }
 
 .label {
@@ -35,6 +70,40 @@
   z-index: 1;
 }
 
+/* An unlabelled edge: a faint "+ label" affordance until the host names it. */
+.labelEmpty {
+  opacity: 0;
+  box-shadow: none;
+  transition: opacity var(--transition-fast);
+}
+.labelEmpty:hover {
+  opacity: 0.85;
+}
+
+.text {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.input {
+  font: inherit;
+  color: var(--color-text);
+  background: transparent;
+  border: none;
+  padding: 0;
+  min-width: 120px;
+}
+.input:focus {
+  outline: none;
+}
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
 .del {
   display: inline-flex;
   align-items: center;
@@ -46,6 +115,7 @@
   line-height: var(--leading-flush);
   color: var(--color-text);
   opacity: 0;
+  cursor: pointer;
   transition: opacity var(--transition-fast), background var(--transition-fast);
 }
 
@@ -55,5 +125,5 @@
 
 .del:hover {
   background: var(--color-surface-hover);
-  color: #c0392b;
+  color: var(--color-accent);
 }
