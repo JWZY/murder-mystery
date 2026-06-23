@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "export:world": "node scripts/export-world.mjs",
-    "import:characters": "node scripts/import-characters.mjs"
+    "import:characters": "node scripts/import-characters.mjs",
+    "import:relationships": "node scripts/import-relationships.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",

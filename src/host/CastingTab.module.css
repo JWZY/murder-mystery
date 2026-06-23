@@ -3,41 +3,80 @@
    the only colour is the release badge and the host-only secret field. */
 
 .shell {
-  max-width: 920px;
+  max-width: 1280px;
+  padding-bottom: var(--space-6);
 }
 
 .errorNote {
-  margin-top: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
-/* ── Two-column layout ── */
+/* ── Two-column layout ──
+   The left rail (all the management chrome) and the right pane (the form being
+   filled out) are independent scroll regions: the whole block fills the height
+   below the nav, and each column scrolls on its own. */
 .layout {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 300px 1fr;
   gap: var(--space-6);
-  margin-top: var(--space-6);
-  align-items: start;
+  height: calc(100vh - 100px - var(--space-6));
+  align-items: stretch;
 }
 
-/* ── Left rail ── */
+/* ── Left rail: title, count, add, search (fixed head) + scrolling list ── */
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  border-right: 1px solid var(--color-border);
+  padding-right: var(--space-4);
+  min-height: 0;
+  overflow: hidden;
+}
+.railHead {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  flex: none;
+}
+/* Count line, with the small Add button flush to its right. */
+.countRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.countRow p { margin: 0; }
+.countRow .btnSubtle { padding: 5px 14px; }
+.search {
+  padding: 7px 10px;
+}
 .list {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  border-right: 1px solid var(--color-border);
-  padding-right: var(--space-4);
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+/* ── Right pane: the editor, its own scroll region ── */
+.main {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: var(--space-3);
 }
 .listEmpty {
   color: var(--color-text-muted);
 }
 .listItem {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  grid-template-areas: 'name badge' 'meta badge';
+  display: flex;
   align-items: center;
-  gap: 0 var(--space-3);
+  justify-content: space-between;
+  gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   text-align: left;
   background: transparent;
   border: none;
@@ -47,41 +86,89 @@
 }
 .listItem:hover { background: var(--color-surface-hover); }
 .listItemOn { background: var(--color-surface-hover); }
+.listText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
 .listName {
-  grid-area: name;
   font-size: var(--text-body);
   font-weight: var(--weight-bold);
   line-height: var(--leading-snug);
   color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .listMeta {
-  grid-area: meta;
   font-size: var(--text-body-small);
   line-height: var(--leading-snug);
   color: var(--color-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent);
 }
 
-/* ── Release badge ── */
-.badge {
-  grid-area: badge;
+/* ── Release toggle ──
+   Merged badge + control in the player card header: the label states release,
+   the switch sets it. Off = muted outline; on = accent fill, knob slid right. */
+.releaseToggle {
   display: inline-flex;
   align-items: center;
-  min-height: 22px;
-  padding: 2px 7px 3px;
+  gap: var(--space-2);
+  flex: none;
+  padding: 4px 6px 4px 10px;
+  background: transparent;
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.releaseToggle:hover { border-color: var(--color-border-strong); }
+.releaseToggleLabel {
   font-family: var(--font-heading);
   font-size: var(--text-body-small);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-eyebrow);
   line-height: var(--leading-flush);
   text-transform: uppercase;
-  white-space: nowrap;
+  color: var(--color-text-muted);
 }
-.badgePrivate { background: transparent; color: var(--color-text-muted); }
-.badgeFull {
-  color: var(--color-accent-text);
+.releaseToggleOn .releaseToggleLabel { color: var(--color-accent); }
+.releaseToggleTrack {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-border);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.releaseToggleOn .releaseToggleTrack {
   background: var(--color-accent);
   border-color: var(--color-accent);
+}
+.releaseToggleKnob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--color-text-muted);
+  transition: transform var(--transition-fast), background var(--transition-fast);
+}
+.releaseToggleOn .releaseToggleKnob {
+  transform: translateX(16px);
+  background: var(--color-accent-text);
 }
 
 /* ── Right pane ── */
@@ -99,12 +186,118 @@
   color: var(--color-text-muted);
 }
 
+/* ── Editor: card grid ── */
+.editorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  align-items: start;
+}
+.cardSpan { grid-column: 1 / -1; }
+
+/* A titled card grouping related fields. Stacks its fields with its own gap and
+   zeroes the per-field margin so spacing stays even regardless of field type. */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+.group label { margin-bottom: 0; }
+
+.groupHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* Pack short fields side by side inside a card. */
+.twoCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+.threeCol {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* Even rows: every field is subheading + a one-line description + an input that
+   fills the row. The grid stretches both cells to the taller one, and flex:1 on
+   the textarea makes both inputs grow to match — no zigzagging start positions. */
+.twoCol > label { height: 100%; }
+.twoCol .hint {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.twoCol textarea {
+  flex: 1;
+  min-height: 132px;
+}
+
+/* ── Player-facing card — the released surface, visually set apart ── */
+.playerCard {
+  border-color: color-mix(in oklch, var(--color-accent) 35%, var(--color-border));
+}
+.playerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.playerHead .hint { margin-top: 4px; }
+.playerEyebrow { color: var(--color-accent); }
+
+/* Murderer flag + comfort, on their own row beneath the background. */
+.castingRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+}
+
+/* Read-only player metadata (comfort). */
+.metaItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Field label row — label left, "Required" marker right. */
+.labelRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.req {
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  font-weight: var(--weight-body);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
 .checkRow {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-4);
   cursor: pointer;
+}
+
+/* Auto-sizing textareas — grow to fit content (height set in JS); no manual
+   resize handle, no inner scrollbar. */
+.autoArea {
+  resize: none;
+  overflow: hidden;
+  min-height: 44px;
 }
 
 /* Host-only motive — a whisper of the accent so it never gets sent by reflex. */
@@ -112,24 +305,59 @@
   border-color: color-mix(in oklch, var(--color-accent) 45%, var(--color-border));
 }
 
-/* ── Reveal controls ── */
-.release {
-  margin-top: var(--space-5);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--color-border);
-}
-.releaseHead {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
 .confirmRow {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-3);
 }
+
+/* ── Subdued buttons — bordered surface chip, echoing the intake "next" control.
+   Used where the global underlined .btn would shout (Add character, Release). ── */
+.btnSubtle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+.btnSubtle:hover:not(:disabled) {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+.btnSubtle:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* Quiet text variant for secondary actions (cancel, unrelease). */
+.btnText {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 6px;
+  font-family: var(--font-heading);
+  font-size: var(--text-body-small);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color var(--transition-fast);
+}
+.btnText:hover:not(:disabled) { color: var(--color-text); }
 
 .deleteBtn {
   display: inline-flex;
@@ -146,12 +374,30 @@
 }
 .deleteBtn:hover { opacity: 0.72; }
 
+@media (max-width: 1080px) {
+  .editorGrid { grid-template-columns: 1fr; }
+}
 @media (max-width: 720px) {
-  .layout { grid-template-columns: 1fr; }
-  .list {
+  /* Stack and fall back to normal page scroll — no fixed-height split panes. */
+  .layout {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+  .rail {
     border-right: none;
     border-bottom: 1px solid var(--color-border);
     padding-right: 0;
     padding-bottom: var(--space-4);
+    overflow: visible;
   }
+  .list {
+    overflow-y: visible;
+    flex: none;
+  }
+  .main {
+    overflow-y: visible;
+    padding-right: 0;
+  }
+  .twoCol,
+  .threeCol { grid-template-columns: 1fr; }
 }
