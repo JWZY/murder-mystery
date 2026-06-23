@@ -21,15 +21,14 @@ type TextField = keyof Pick<
   'name' | 'title' | 'background' | 'act1' | 'act2' | 'act3' | 'action' | 'props' | 'recommended_meets' | 'secret'
 >;
 
-type ReleaseStage = 'private' | 'consent' | 'full';
-
 /**
  * Stage 3 — Cast. One character edited at a time. The left rail lists every
- * character (with who's cast + how far it's been revealed); the right pane is a
+ * character (with who's cast + whether it's released); the right pane is a
  * plain form that autosaves changed keys back to Supabase.
  *
- * Two-phase reveal: "Send background" lets a friend consent to the concept;
- * "Release full character" hands them the acts and their secret action. Nothing
+ * Reveal is binary: "Release" makes the player's card visible — their name and
+ * "who you are" background only. Acts, props, and the secret action are
+ * delivered by the host out of band, never sent to the player's card. Nothing
  * is auto-generated here — characters are born on the Canvas or via "Add
  * character", never seeded behind your back.
  */
@@ -218,7 +217,7 @@ export default function CastingTab() {
                 <span className={styles.listMeta}>
                   {c.title || 'no archetype'}{cast ? ` · ${displayName(cast)}` : ''}
                 </span>
-                <StageBadge stage={stageOf(c)} />
+                <StageBadge released={c.released} />
               </button>
             );
           })}
@@ -274,7 +273,6 @@ function Editor({
   // textarea keeps its own draft seeded once per character.
   const [truthDraft, setTruthDraft] = useState(() => truthTagsToText(char.truth_tags));
   const [confirm, setConfirm] = useState<null | { label: string; patch: Partial<CharacterFull> }>(null);
-  const stage = stageOf(char);
 
   return (
     <div className={styles.editor}>
@@ -315,14 +313,14 @@ function Editor({
       )}
 
       <Field label="Background">
-        <textarea className={s.area} rows={3} value={char.background} onChange={(e) => onEditText('background', e.target.value)} placeholder="Who they are. Shared at the consent stage." />
+        <textarea className={s.area} rows={3} value={char.background} onChange={(e) => onEditText('background', e.target.value)} placeholder="Who they are — the only thing shown on the player's card when you release." />
       </Field>
 
       <Field label="Act I"><textarea className={s.area} rows={3} value={char.act1} onChange={(e) => onEditText('act1', e.target.value)} /></Field>
       <Field label="Act II"><textarea className={s.area} rows={3} value={char.act2} onChange={(e) => onEditText('act2', e.target.value)} /></Field>
       <Field label="Act III"><textarea className={s.area} rows={3} value={char.act3} onChange={(e) => onEditText('act3', e.target.value)} /></Field>
 
-      <Field label="Secret action" hint="Handed to the player at full release — what they do that shapes the crime.">
+      <Field label="Secret action" hint="What they do that shapes the crime. You deliver this to the player yourself — it's never sent to their card.">
         <textarea className={s.area} rows={3} value={char.action} onChange={(e) => onEditText('action', e.target.value)} />
       </Field>
 
@@ -352,7 +350,7 @@ function Editor({
       <div className={styles.release}>
         <div className={styles.releaseHead}>
           <span className={s.eyebrow}>Reveal</span>
-          <StageBadge stage={stage} />
+          <StageBadge released={char.released} />
         </div>
 
         {confirm ? (
@@ -363,29 +361,13 @@ function Editor({
           </div>
         ) : (
           <div className={s.actions}>
-            {stage === 'private' && (
-              <>
-                <button className={s.btn} onClick={() => setConfirm({ label: 'Send the background for the player to consent to?', patch: { background_released: true } })}>
-                  Send background
-                </button>
-                <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm({ label: 'Release the full character now?', patch: { released: true } })}>
-                  Release full
-                </button>
-              </>
-            )}
-            {stage === 'consent' && (
-              <>
-                <button className={s.btn} onClick={() => setConfirm({ label: 'Release the full character — acts, props, and their secret action?', patch: { released: true } })}>
-                  Release full
-                </button>
-                <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm({ label: 'Take the background back to private?', patch: { background_released: false } })}>
-                  Unsend
-                </button>
-              </>
-            )}
-            {stage === 'full' && (
-              <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm({ label: 'Pull the full character back to background-only?', patch: { released: false } })}>
+            {char.released ? (
+              <button className={`${s.btn} ${s.btnGhost}`} onClick={() => setConfirm({ label: 'Unrelease — hide this character from the player again?', patch: { released: false } })}>
                 Unrelease
+              </button>
+            ) : (
+              <button className={s.btn} onClick={() => setConfirm({ label: 'Release this character to the player?', patch: { released: true } })}>
+                Release
               </button>
             )}
           </div>
@@ -409,10 +391,9 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
   );
 }
 
-function StageBadge({ stage }: { stage: ReleaseStage }) {
-  const label = stage === 'full' ? 'Released' : stage === 'consent' ? 'Background sent' : 'Private';
-  const cls = stage === 'full' ? styles.badgeFull : stage === 'consent' ? styles.badgeConsent : styles.badgePrivate;
-  return <span className={`${styles.badge} ${cls}`}>{label}</span>;
+function StageBadge({ released }: { released: boolean }) {
+  const cls = released ? styles.badgeFull : styles.badgePrivate;
+  return <span className={`${styles.badge} ${cls}`}>{released ? 'Released' : 'Unreleased'}</span>;
 }
 
 function Shell({ children }: { children: ReactNode }) {
@@ -424,12 +405,6 @@ function Shell({ children }: { children: ReactNode }) {
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────
-
-function stageOf(c: CharacterFull): ReleaseStage {
-  if (c.released) return 'full';
-  if (c.background_released) return 'consent';
-  return 'private';
-}
 
 function mergeCharacter(world: HostWorld, id: string, patch: Partial<CharacterFull>): HostWorld {
   return {

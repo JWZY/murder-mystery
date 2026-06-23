@@ -137,7 +137,7 @@ function About({ settings: _settings }: { settings: PublicSettings | null }) {
       <section className={`${s.section} ${about.aboutIntro}`}>
         <div>
           <p className={about.lede}>
-            A tragic murder happens at a reunion, and secrets unravel.
+            A tragic murder in 1928 Hollywood, and secrets unravel.
           </p>
           <p className={about.lede}>
             Film noir inspired. Think corrupt cops, hardboiled detective, broody monologues.
@@ -152,7 +152,7 @@ function About({ settings: _settings }: { settings: PublicSettings | null }) {
         <dl className={about.details}>
           <div>
             <dt>Premise</dt>
-            <dd>Murder at a Reunion</dd>
+            <dd>1928 Hollywood</dd>
           </div>
           <div>
             <dt>Where</dt>
@@ -424,57 +424,24 @@ function Character({ token }: { token: string }) {
         <CharacterHeader title={title} />
         <div className={s.section}>
           <p className={s.intro}>
-            Your character hasn’t been revealed yet. Still weaving everyone’s stories together — you’ll see it here once casting is done.
+            Casting is still in progress — your character will appear here the moment it’s ready.
           </p>
         </div>
       </>
     );
   }
 
-  // Two-phase reveal. Consent: just the concept, framed as a "does this work for
-  // you?" sign-off — no acts, no secret action. Full: the whole script.
-  const consent = char.phase === 'consent';
-
+  // Binary reveal: once the host releases the character the player sees only
+  // their name, archetype title, and "who you are" background. Acts, props, and
+  // the secret action are delivered by the host out of band — never shown here.
   return (
     <>
     <CharacterHeader title={title} />
     <div className={s.section}>
-    {consent && (
-      <p className={s.intro}>
-        Here’s the character we have in mind for you. Have a read — does this feel like someone you’d enjoy playing? Reply to let me know, and we can shape it together before the rest is revealed.
-      </p>
-    )}
     <div className={s.card}>
       <p className={`${s.body} ${s.muted}`}>{char.title}</p>
 
       <Act label="Who you are" body={char.background} />
-
-      {!consent && (
-        <>
-          <Act label="Act I — Arrival" body={char.act1 ?? ''} />
-          <Act label="Act II — The Catalyst" body={char.act2 ?? ''} />
-          <Act label="Act III — The Reckoning" body={char.act3 ?? ''} />
-          {char.recommended_meets && <Act label="People to seek out" body={char.recommended_meets} />}
-          {char.props && <Act label="Props / what to bring" body={char.props} />}
-          {char.action && (
-            <>
-              <p className={s.bodyBold} style={{ marginTop: 'var(--space-5)' }}>Your secret action</p>
-              <p className={s.body} style={{ marginTop: 'var(--space-2)', whiteSpace: 'pre-wrap' }}>{char.action}</p>
-            </>
-          )}
-        </>
-      )}
-
-      {char.truth_tags?.length > 0 && (
-        <>
-          <p className={s.bodyBold} style={{ marginTop: 'var(--space-5)' }}>The real you, woven in</p>
-          {char.truth_tags.map((t, i) => (
-            <p key={i} className={s.body} style={{ marginTop: 'var(--space-2)' }}>
-              {t.beat ? `${t.beat}: ` : ''}{t.truth} <span className={s.muted}>— true, share it if you’re comfortable.</span>
-            </p>
-          ))}
-        </>
-      )}
     </div>
     </div>
     </>

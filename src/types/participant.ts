@@ -54,27 +54,17 @@ export interface RosterEntry {
 /**
  * The fiction a player is allowed to see for their own character.
  *
- * Revealed in two phases (see supabase/casting-phase2.sql `get_my_character`):
- *   - `consent` — name, title, background, truth_tags only. No plot.
- *   - `full`    — adds acts, action, props, recommended_meets.
- * The plot fields are therefore optional; `secret` (host-only motive) is never
- * sent in either phase.
+ * Binary reveal (see supabase/casting-phase4.sql `get_my_character`): until the
+ * host releases the character the RPC returns null and the player sees a
+ * "casting in progress" placeholder. Once released they see only their name,
+ * archetype title, and "who you are" background. Acts, props, the secret action,
+ * and truth tags are delivered by the host out of band and are never sent to the
+ * client — the no-leak is structural, not a display flag.
  */
 export interface MyCharacter {
-  phase: 'consent' | 'full';
   name: string;
   title: string;
   background: string;
-  truth_tags: { beat?: string; truth?: string }[];
-  color: string;
-  // full-phase only
-  act1?: string;
-  act2?: string;
-  act3?: string;
-  /** The secret action handed to the player at the party. */
-  action?: string;
-  props?: string;
-  recommended_meets?: string;
 }
 
 export interface PublicSettings {

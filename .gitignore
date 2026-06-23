@@ -20,6 +20,11 @@ planning/
 ink-effects/
 smoke-and-blood/
 
+# Relationship-web brainstorm — a local-only duplicate of the planning canvas.
+# Dev-only (served by `vite` at /brainstorm.html); never built or deployed.
+brainstorm.html
+src/brainstorm/
+
 # QuickEntry (Xcode)
 extras/QuickEntry/build/
 extras/QuickEntry/DerivedData/
