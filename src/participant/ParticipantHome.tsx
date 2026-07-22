@@ -154,7 +154,7 @@ function About({ settings: _settings }: { settings: PublicSettings | null }) {
           </div>
           <div>
             <dt>Where</dt>
-            <dd>100 HOLLYWOOD BLVD, LA</dd>
+            <dd>100 Hollywood Blvd, LA</dd>
           </div>
           <div>
             <dt>When</dt>
