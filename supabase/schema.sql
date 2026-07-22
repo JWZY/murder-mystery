@@ -139,7 +139,7 @@ create table if not exists story_acts (
 create table if not exists public_settings (
   id          boolean primary key default true check (id),   -- enforce 1 row
   party_title text not null default 'Murder Mystery + Potluck',
-  party_blurb text not null default '57 wagon trailway · July 11 7PM',
+  party_blurb text not null default '100 HOLLYWOOD BLVD, LA · July 11 7PM',
   intake_open boolean not null default true,
   roster_visible boolean not null default true
 );

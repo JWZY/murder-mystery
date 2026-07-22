@@ -156,7 +156,7 @@ function About({ settings: _settings }: { settings: PublicSettings | null }) {
           </div>
           <div>
             <dt>Where</dt>
-            <dd>57 Wagon Trailway</dd>
+            <dd>100 HOLLYWOOD BLVD, LA</dd>
           </div>
           <div>
             <dt>When</dt>

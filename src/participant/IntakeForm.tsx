@@ -156,7 +156,7 @@ export default function IntakeForm({ settings }: { settings: PublicSettings | nu
   ));
   const draftTimer = useRef<number | null>(null);
 
-  const title = 'A murder at 57 Wagon Trailway. July 11, after 7PM.';
+  const title = 'A murder at 100 HOLLYWOOD BLVD, LA. July 11, after 7PM.';
   const closed = settings ? !settings.intake_open : false;
   const step = STEPS[idx];
   const atFirst = idx === 0;
