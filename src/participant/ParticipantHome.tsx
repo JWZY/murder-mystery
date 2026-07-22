@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Info, UserRound, FileUser, VenetianMask } from 'lucide-react';
-import type { ParticipantRecord, RosterEntry, MyCharacter, PublicSettings } from '../types/participant';
-import { getMyRecord, updateMyRecord, getRoster, getMyCharacter } from '../lib/api';
+import { Info, UserRound, FileUser } from 'lucide-react';
+import type { ParticipantRecord, RosterEntry, PublicSettings } from '../types/participant';
+import { getMyRecord, updateMyRecord, getRoster } from '../lib/api';
 import { formatDishContribution } from '../lib/intakeSchema';
 import RecordFields from './RecordFields';
 import Typewriter from './Typewriter';
@@ -13,7 +13,7 @@ import sus from './Suspects.module.css';
 import about from './About.module.css';
 import participant from './participant.module.css';
 
-type Tab = 'you' | 'about' | 'roster' | 'character';
+type Tab = 'you' | 'about' | 'roster';
 const TAB_TITLE_TYPE_DELAY = 300;
 
 export default function ParticipantHome({
@@ -80,7 +80,6 @@ export default function ParticipantHome({
     { id: 'you' as const, label: firstName || 'You', Icon: UserRound },
     { id: 'about' as const, label: 'About', Icon: Info },
     { id: 'roster' as const, label: 'Suspects', Icon: FileUser },
-    { id: 'character' as const, label: 'Character', Icon: VenetianMask },
   ];
 
   return (
@@ -97,7 +96,6 @@ export default function ParticipantHome({
           {tab === 'you' && <EditEntry token={token} rec={rec} setRec={setRec} intakeSubmitted={intakeSubmitted} />}
           {tab === 'about' && <About settings={settings} />}
           {tab === 'roster' && <Roster token={token} visible={settings?.roster_visible ?? true} me={rec} />}
-          {tab === 'character' && <Character token={token} />}
         </TabPanel>
       </Shell>
     </>
@@ -388,70 +386,6 @@ function Silhouette({ variant }: { variant: number }) {
   );
 }
 
-function Character({ token }: { token: string }) {
-  const [char, setChar] = useState<MyCharacter | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    getMyCharacter(token)
-      .then(setChar)
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed.'))
-      .finally(() => setLoaded(true));
-  }, [token]);
-
-  const title = char?.name ?? 'Casting in progress…';
-
-  if (error) {
-    return (
-      <>
-        <CharacterHeader title={title} />
-        <div className={s.section}><p className={s.notice}>{error}</p></div>
-      </>
-    );
-  }
-  if (!loaded) {
-    return (
-      <>
-        <CharacterHeader title={title} />
-        <div className={s.section}><p className={`${s.body} ${s.muted}`}>Checking…</p></div>
-      </>
-    );
-  }
-  if (!char) {
-    return (
-      <>
-        <CharacterHeader title={title} />
-        <div className={s.section}>
-          <p className={s.intro}>
-            Casting is still in progress — your character will appear here the moment it’s ready.
-          </p>
-        </div>
-      </>
-    );
-  }
-
-  // Binary reveal: once the host releases the character the player sees only
-  // their name, archetype title, and "who you are" background. Acts, props, and
-  // the secret action are delivered by the host out of band — never shown here.
-  return (
-    <>
-    <CharacterHeader title={title} />
-    <div className={s.section}>
-    <div className={s.card}>
-      <p className={`${s.body} ${s.muted}`}>{char.title}</p>
-
-      <Act label="Who you are" body={char.background} />
-    </div>
-    </div>
-    </>
-  );
-}
-
-function CharacterHeader({ title }: { title: string }) {
-  return <TabTitle text={title} />;
-}
-
 function TabTitle({ text, aside }: { text: string; aside?: React.ReactNode }) {
   return (
     <div className={s.titleRow}>
@@ -460,15 +394,5 @@ function TabTitle({ text, aside }: { text: string; aside?: React.ReactNode }) {
       </h1>
       {aside}
     </div>
-  );
-}
-
-function Act({ label, body }: { label: string; body: string }) {
-  if (!body) return null;
-  return (
-    <>
-      <p className={s.bodyBold} style={{ marginTop: 'var(--space-5)' }}>{label}</p>
-      <p className={s.body} style={{ marginTop: 'var(--space-2)', whiteSpace: 'pre-wrap' }}>{body}</p>
-    </>
   );
 }
